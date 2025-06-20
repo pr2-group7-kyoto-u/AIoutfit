@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # MySQL データベースサービス
+  db:
+    image: mysql:8.0
+    container_name: daily-outfit-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db_data:/var/lib/mysql # 永続化のためのボリューム
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Flask バックエンドサービス
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: daily-outfit-backend
+    environment:
+      DATABASE_URL: mysql+mysqlconnector://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}
+      # LLM_API_KEY: ${LLM_API_KEY}
+      # WEATHER_API_KEY: ${WEATHER_API_KEY}
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy # DBが起動してからバックエンドを起動
+
+  # React フロントエンドサービス
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: daily-outfit-frontend
+    ports:
+      - "80:80" # Nginxのデフォルトポート
+    volumes:
+      - ./frontend/build:/usr/share/nginx/html # ビルドされたReactアプリをNginxが提供
+    depends_on:
+      - backend # フロントエンドがバックエンドに依存
+
+volumes:
+  db_data: # MySQLデータボリュームの定義

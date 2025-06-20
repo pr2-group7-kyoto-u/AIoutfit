@@ -1,0 +1,8 @@
+.env
+node_modules/
+build/
+backend/__pycache__/
+.mypy_cache/
+.pytest_cache/
+*.pyc
+*.log
