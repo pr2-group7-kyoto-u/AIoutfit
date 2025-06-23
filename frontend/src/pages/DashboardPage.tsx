@@ -1,9 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
+import { useAuth } from '../hooks/useAuth';
 
 const DashboardPage: React.FC = () => {
-  const userId = parseInt(localStorage.getItem('user_id') || '0');
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const navigate = useNavigate();
+
+  // 未認証ならログインページにリダイレクト
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isLoading, isAuthenticated, navigate]);
+
+  const userId = user ? user.id : 0;
   const [clothes, setClothes] = useState([]);
   const [newClothName, setNewClothName] = useState('');
   const [newClothCategory, setNewClothCategory] = useState('');
@@ -17,7 +28,6 @@ const DashboardPage: React.FC = () => {
 
   const fetchClothes = useCallback(async () => {
     if (!userId || isNaN(userId)) {
-      console.warn("Invalid userId for fetching clothes.");
       return;
     }
     try {
@@ -29,18 +39,16 @@ const DashboardPage: React.FC = () => {
     }
   }, [userId]);
 
-  // コンポーネントマウント時、または userId が変更された時に服を読み込む
   useEffect(() => {
     fetchClothes();
   }, [fetchClothes]);
 
   const handleAddCloth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId || isNaN(userId)) {
+    if (!user) {
       setMessage("ログインしていません。");
       return;
     }
-
 
     if (!newClothName || !newClothCategory || !newClothColor) {
         setMessage("服の名前、カテゴリ、色は必須です。");
@@ -48,7 +56,7 @@ const DashboardPage: React.FC = () => {
     }
 
     try {
-      const result = await api.addCloth(userId, {
+      const result = await api.addCloth(user.id, {
         name: newClothName,
         category: newClothCategory,
         color: newClothColor,
@@ -72,13 +80,13 @@ const DashboardPage: React.FC = () => {
       setMessage("日付と外出先は必須です。");
       return;
     }
-    if (!userId || isNaN(userId)) {
+    if (!user) {
         setMessage("ログインしていません。");
         return;
     }
 
     try {
-      const result = await api.suggestOutfits(userId, suggestedDate, occasion, location);
+      const result = await api.suggestOutfits(user.id, suggestedDate, occasion, location);
       if (result.suggestions) {
         setOutfitSuggestions(result.suggestions);
       }
@@ -89,9 +97,19 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  if (isLoading) {
+    return <div>認証状態を読み込み中...</div>; // 読み込み中の表示
+  }
+
   return (
     <div>
-      <h2>ダッシュボード (ユーザーID: {userId})</h2>
+      <h2>ダッシュボード (ようこそ {user?.username} さん!)</h2> {/* ユーザー名を表示 */}
+      <button onClick={handleLogout} style={{ float: 'right' }}>ログアウト</button>
       <Link to="/">ホームに戻る</Link>
 
       <h3>服の登録</h3>
@@ -112,7 +130,6 @@ const DashboardPage: React.FC = () => {
           ))}
         </ul>
       )}
-
 
       <h3>コーデ提案</h3>
       <form onSubmit={handleSuggestOutfits}>

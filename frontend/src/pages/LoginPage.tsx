@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import api from '../api';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
-  const [userId, setUserId] = useState<number | null>(null);
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = await api.login(username, password);
-    setMessage(result.message);
-    if (result.user_id) {
-      setUserId(result.user_id);
-      localStorage.setItem('user_id', result.user_id); // 簡易的なユーザーID保存
+    const { success, message: msg } = await login(username, password);
+    setMessage(msg);
+    if (success) {
+      navigate('/dashboard');
     }
   };
 
@@ -27,7 +27,6 @@ const LoginPage: React.FC = () => {
         <button type="submit">ログイン</button>
       </form>
       {message && <p>{message}</p>}
-      {userId && <p>ログイン成功！ユーザーID: {userId}</p>}
       <Link to="/">ホームに戻る</Link>
     </div>
   );
