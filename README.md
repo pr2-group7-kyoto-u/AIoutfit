@@ -189,6 +189,33 @@ Docker Composeを使用して、アプリケーションのサービス（MySQL,
     docker exec -it daily-outfit-db bash      # MySQLデータベースのシェル
     ```
 
+## 8. uvの利用法
+* uvのインストール
+```
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+* ディレクトリ移動
+```
+cd backend
+```
+* ライブラリのインストール
+```
+uv sync
+```
+
+* プログラムの実行
+
+`python`の代わりに`uv run`で実行してください
+
+e.g
+```
+uv run main.py
+```
 ## 7. トラブルシューティング
 
 もし問題が発生した場合、以下の情報を添えて、チームメンバーやメンターに相談してください。
