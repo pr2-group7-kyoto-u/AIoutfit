@@ -124,6 +124,26 @@ Docker Composeを使用して、アプリケーションのサービス（MySQL,
     ```
     もし `State` が `exited` や `unhealthy` の場合、何らかのエラーが発生しています。`docker compose logs [サービス名]` (例: `docker compose logs db`) コマンドでログを確認し、トラブルシューティングしてください。
 
+#### 4.3.1. フロントエンドの依存関係のインストール（`npm install` について）
+
+通常、`docker compose up --build -d` コマンドを実行する際、`frontend/Dockerfile` のビルドステップで自動的に `npm install` が実行されます。そのため、**基本的な環境構築において、開発者が手動で `npm install` を実行する必要はありません。**
+
+ただし、以下のような場合には手動での `npm install` が必要となることがあります。
+
+* **Dockerコンテナを使わず、ローカルマシンで直接フロントエンドの開発を行う場合**（例: `cd frontend && npm start`）。
+* **新しいNode.jsパッケージ（ライブラリ）を `package.json` に追加した場合**。
+* **既存の依存関係を最新バージョンに更新したい場合**（`npm update`）。
+* 何らかの理由でDockerのビルドキャッシュが壊れ、コンテナ内の `node_modules` が不完全になった可能性がある場合。
+
+手動で `npm install` を実行する場合は、`frontend` ディレクトリに移動してからコマンドを実行してください。
+
+```bash
+cd frontend
+npm install
+cd .. # 作業後、必ずプロジェクトルートに戻る
+```
+
+
 ### 4.4. データベースの初期化とマイグレーション
 
 アプリケーションのデータベーススキーマを設定します。
