@@ -47,8 +47,6 @@ services:
     container_name: daily-outfit-frontend
     ports:
       - "80:80" # Nginxのデフォルトポート
-    volumes:
-      - ./frontend/build:/usr/share/nginx/html # ビルドされたReactアプリをNginxが提供
     depends_on:
       - backend # フロントエンドがバックエンドに依存
 
