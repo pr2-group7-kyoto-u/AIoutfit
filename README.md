@@ -8,6 +8,7 @@
 React（TypeScript）製のフロントエンド、Flask（Python）製のバックエンド、およびMySQLデータベースで構成されており、これら全てはDocker Composeを使用してコンテナとして実行されます。
 
 ## 2. プロジェクトの構造(一部省略)
+```
 daily-outfit-app/
 ├── backend/                  # Flaskバックエンドアプリケーション
 │   ├── app/                  # FlaskアプリケーションのPythonコード
@@ -37,7 +38,7 @@ daily-outfit-app/
 ├── .env.example              # 環境変数の例 (Git管理)
 ├── .gitignore                # Gitが無視するファイル/ディレクトリ
 └── docker-compose.yml        # Docker Compose設定ファイル
-
+```
 
 ## 3. 前提条件
 
