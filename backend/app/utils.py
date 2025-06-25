@@ -5,6 +5,9 @@ from PIL import Image
 from io import BytesIO
 import time
 from loguru import logger
+import openai
+import json
+import dotenv
 
 import torch
 from transformers import CLIPModel, CLIPProcessor
@@ -12,35 +15,37 @@ from pinecone import Pinecone, ServerlessSpec
 
 # --- グローバル設定 ---
 MODEL_NAME = "openai/clip-vit-base-patch32"
-INDEX_NAME = "test"
+INDEX_NAME = "test" # インデックス名をより具体的に変更
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-# --- 外部連携の仮関数 (モック) ---
-def get_llm_response(prompt: str) -> dict:
-    """LLMからの応答を模倣するダミー関数"""
-    logger.info(f"LLM PROMPT:\n{prompt}")
-    # ... (この関数の実装は変更なし)
-    return {}
-
-def get_weather_info(location: str, date: str) -> dict:
-    """天気情報APIの応答を模倣するダミー関数"""
-    logger.info(f"Fetching weather for {location} on {date}")
-    return {"temperature": 25, "condition": "晴れ"}
+dotenv.load_dotenv()
 
 # --- サービス初期化 ---
 def initialize_services():
-    """Pinecone、CLIPモデル、プロセッサを初期化し、インデックスに接続する。"""
+    """Pinecone, CLIPモデル, OpenAIクライアント等を初期化する。"""
     logger.info("--- 1. Initializing Services ---")
     logger.info(f"Using device: {DEVICE}")
-    api_key = os.environ.get("PINECONE_API_KEY")
-    if not api_key:
-        raise ValueError("PINECONE_API_KEY environment variable not set")
-    pc = Pinecone(api_key=api_key)
 
+    # Pineconeクライアントの初期化
+    pinecone_api_key = os.getenv("PINECONE_API_KEY")
+    pinecone_environment = os.getenv("PINECONE_ENVIRONMENT", "us-west1-gcp")
+    
+    if not pinecone_api_key:
+        raise ValueError("PINECONE_API_KEY environment variable not set")
+    pc = Pinecone(api_key=pinecone_api_key)
+
+    # OpenAIクライアントの初期化
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        raise ValueError("OPENAI_API_KEY environment variable not set")
+    openai_client = openai.OpenAI(api_key=openai_api_key)
+    logger.info("OpenAI client initialized.")
+    
+    # CLIPモデルとプロセッサのロード
     logger.info("Loading CLIP model and processor...")
     model = CLIPModel.from_pretrained(MODEL_NAME).to(DEVICE)
     processor = CLIPProcessor.from_pretrained(MODEL_NAME)
     
+    # Pineconeインデックスの作成または接続
     embedding_dim = model.config.projection_dim
     if INDEX_NAME not in pc.list_indexes().names():
         logger.info(f"Creating index '{INDEX_NAME}' with dimension {embedding_dim}...")
@@ -50,11 +55,11 @@ def initialize_services():
         logger.info(f"Index '{INDEX_NAME}' already exists.")
         
     index = pc.Index(INDEX_NAME)
-    logger.info(index.describe_index_stats())
+    logger.info(f"Initial index stats: {index.describe_index_stats()}")
     
-    return model, processor, index
+    return model, processor, index, openai_client
 
-# --- 画像処理・ベクトル化 ---
+# --- 低レベルヘルパー関数 (ベクトル化・ファイル保存) ---
 def embed_image(image: Image.Image, model: CLIPModel, processor: CLIPProcessor) -> list | None:
     """PIL.Image オブジェクトをベクトル化する。"""
     try:
@@ -74,113 +79,127 @@ def embed_text(text: str, model: CLIPModel, processor: CLIPProcessor) -> list:
         text_features = model.get_text_features(**inputs)
     return text_features[0].cpu().numpy().tolist()
 
-# --- ファイル保存とDB操作 ---
 def save_image_locally(image_bytes: bytes, user_id: str, item_id: str) -> str | None:
     """画像をローカルに保存し、URLパスを返す。"""
     try:
-        save_dir = os.path.join('static', 'uploads', user_id, 'items')
+        save_dir = os.path.join('static', 'uploads', user_id)
         os.makedirs(save_dir, exist_ok=True)
         file_name = f"{item_id}.jpg"
         file_path = os.path.join(save_dir, file_name)
         with open(file_path, 'wb') as f:
             f.write(image_bytes)
-        url_path = os.path.join('uploads', user_id, 'items', file_name).replace(os.path.sep, '/')
-        logger.success(f"Successfully saved image locally to: {file_path}")
+        url_path = os.path.join('uploads', user_id, file_name).replace(os.path.sep, '/')
+        logger.success(f"Saved image locally to: {file_path}")
         return f"/static/{url_path}"
     except Exception as e:
         logger.error(f"Failed to save image locally: {e}")
         return None
 
+# --- 中レベルコア関数 (DB操作) ---
 def upload_image_to_pinecone(image_bytes: bytes, user_id: str, item_metadata: dict, index: Pinecone.Index, model: CLIPModel, processor: CLIPProcessor) -> dict:
     """画像をローカルに保存し、そのURLとベクトルをPineconeに登録する。"""
-    logger.info(f"Starting image upload process for user: {user_id}")
+    logger.info(f"Starting image upload for user '{user_id}' with metadata: {item_metadata.get('description')}")
     try:
         item_id = str(uuid.uuid4())
         image_url_path = save_image_locally(image_bytes, user_id, item_id)
-        if not image_url_path:
-            return {"success": False, "error": "Failed to save image locally."}
+        if not image_url_path: return {"success": False, "error": "Failed to save image locally."}
         
         image = Image.open(BytesIO(image_bytes))
         image_vector = embed_image(image, model, processor)
-        if not image_vector:
-            return {"success": False, "error": "Failed to vectorize image."}
+        if not image_vector: return {"success": False, "error": "Failed to vectorize image."}
 
         final_metadata = {"user_id": user_id, "image_url": image_url_path, **item_metadata}
         vector_to_upsert = {"id": item_id, "values": image_vector, "metadata": final_metadata}
         
         index.upsert(vectors=[vector_to_upsert], namespace=user_id)
-        logger.success(f"Successfully processed and registered item {item_id} for user {user_id}.")
-
         return {"success": True, "item_id": item_id, "user_id": user_id, "image_url": image_url_path}
     except Exception as e:
         logger.error(f"An unexpected error occurred during upload process: {e}")
         return {"success": False, "error": str(e)}
 
-# ★★★ 新しい検索関数 ★★★
-def search_items_for_user(query: str, user_id: str, index: Pinecone.Index, model: CLIPModel, processor: CLIPProcessor, top_k: int = 3) -> list:
-    """
-    指定したユーザーのアイテムの中から、テキストクエリで検索する。
-
-    Args:
-        query (str): 検索するテキスト
-        user_id (str): 検索対象のユーザーID (namespace)
-        index (Pinecone.Index): Pineconeインデックス
-        model (CLIPModel): CLIPモデル
-        processor (CLIPProcessor): CLIPプロセッサ
-        top_k (int): 取得する検索結果の数
-
-    Returns:
-        list: 検索結果のリスト
-    """
-    logger.info(f"\n--- Searching for: '{query}' in user '{user_id}' namespace ---")
-    
+def search_items_for_user(query: str, user_id: str, index: Pinecone.Index, model: CLIPModel, processor: CLIPProcessor, top_k: int) -> list:
+    """指定したユーザーのアイテムの中から、テキストクエリで検索する。"""
     query_vector = embed_text(query, model, processor)
-    
-    result = index.query(
-        vector=query_vector,
-        top_k=top_k,
-        include_metadata=True,
-        namespace=user_id  # ★★★ ここでユーザーを指定 ★★★
-    )
-    
-    matches = result.get('matches', [])
-    if not matches:
-        logger.warning("No matches found.")
-    else:
-        for match in matches:
-            logger.info(f"  ID: {match['id']}")
-            logger.info(f"  Score: {match['score']:.4f}")
-            logger.info(f"  Metadata: {match['metadata']}\n")
-            
-    return matches
+    result = index.query(vector=query_vector, top_k=top_k, include_metadata=True, namespace=user_id)
+    return result.get('matches', [])
 
-# --- メイン実行部分 ---
+# --- 高レベル "頭脳" 関数 (LLM連携) ---
+def generate_outfit_queries_with_openai(context: dict, openai_client: openai.OpenAI) -> dict | None:
+    """ユーザーの状況から、OpenAIモデルを使って最適な服装のクエリを生成する。"""
+    logger.info("Generating outfit queries with OpenAI...")
+    system_prompt = """
+    あなたは日本のトップファッションスタイリストです。提供されたユーザーの状況を分析し、最適な服装の組み合わせを1つ提案してください。
+    回答は必ず以下のJSON形式で、キーも完全に一致させてください。
+    {"tops": "トップスの説明(英語)", "bottoms": "ボトムスの説明(英語)", "outerwear": "アウターの説明(英語、不要ならnull)", "shoes": "靴の説明(英語)", "reason": "このコーディネートを提案した理由(日本語)"}
+    各服装の説明は、ベクトル検索で画像を見つけるため、色、素材、形、スタイル(例: casual, formal)など視覚的な特徴を具体的に記述してください。
+    """
+    user_prompt = f"以下のユーザー状況に最適な服装を提案してください。\n\n# ユーザーの状況\n{json.dumps(context, indent=2, ensure_ascii=False)}"
+    try:
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            response_format={"type": "json_object"},
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
+        )
+        outfit_queries = json.loads(response.choices[0].message.content)
+        logger.success("Successfully generated outfit queries from OpenAI.")
+        return outfit_queries
+    except Exception as e:
+        logger.error(f"Failed to call OpenAI API or parse response: {e}")
+        return None
+
+# --- 最上位アプリケーション関数 (全体統括) ---
+def get_outfit_recommendations(user_id: str, context: dict, services: dict, top_k_per_category: int = 3) -> dict | None:
+    """ユーザーの状況からLLMでクエリを生成し、ベクトル検索を実行して服装の候補を返す。"""
+    logger.info(f"\n--- Starting outfit recommendation for user: {user_id} ---")
+    outfit_idea = generate_outfit_queries_with_openai(context, services["openai_client"])
+    if not outfit_idea: return None
+
+    logger.info(f"LLM's Suggestion: {outfit_idea}")
+    final_recommendation = {"reason": outfit_idea.get("reason"), "candidates": {}}
+
+    for category in ["tops", "bottoms", "outerwear", "shoes"]:
+        query = outfit_idea.get(category)
+        if query:
+            logger.info(f"--- Searching for '{category}' with query: '{query}' ---")
+            search_results = search_items_for_user(
+                query=query,
+                user_id=user_id,
+                top_k=top_k_per_category,
+                # ★★★ 必要な引数だけを明示的に渡す ★★★
+                index=services["index"],
+                model=services["model"],
+                processor=services["processor"]
+            )
+            final_recommendation["candidates"][category] = search_results
+
+    logger.success("Outfit recommendation process completed.")
+    return final_recommendation
+
+# --- デモンストレーション実行 ---
 def main():
-    """
-    メインの処理フローを実行する。
-    """
-    # 1. サービスの初期化
-    model, processor, index = initialize_services()
+    """メインの処理フローを実行する。"""
+    services = { "model": None, "processor": None, "index": None, "openai_client": None }
+    services["model"], services["processor"], services["index"], services["openai_client"] = initialize_services()
 
-    # 2. テストユーザーとアイテム情報を定義
-    test_user_id = "user-A789"
+    # --- 1. テストデータのセットアップ ---
+    test_user_id = "demo-user-001"
+    logger.info(f"\n--- 1. Setting up test data for user '{test_user_id}' ---")
+    
+    # 既存のテストデータをクリーンアップ
+    try:
+        services["index"].delete(delete_all=True, namespace=test_user_id)
+        logger.warning(f"Cleared all previous data for namespace '{test_user_id}'.")
+        time.sleep(5) # 削除が反映されるまで少し待つ
+    except Exception as e:
+        logger.error(f"Could not clear namespace (it might be empty): {e}")
+
     items_to_upload = [
-        {
-            "url": "https://images.unsplash.com/photo-1598554747472-3567a54452b9?q=80&w=1964&auto=format&fit=crop",
-            "metadata": {"category": "outer", "color": "beige", "description": "A light beige trench coat"}
-        },
-        {
-            "url": "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?q=80&w=1887&auto=format&fit=crop",
-            "metadata": {"category": "bottom", "color": "blue", "description": "A pair of classic blue jeans"}
-        },
-        {
-            "url": "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?q=80&w=1972&auto=format&fit=crop",
-            "metadata": {"category": "top", "color": "white", "description": "A simple white t-shirt"}
-        }
+        {"url": "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a", "metadata": {"category": "top", "description": "A simple black t-shirt"}},
+        {"url": "https://images.unsplash.com/photo-1551028719-00167b16eac5", "metadata": {"category": "outer", "description": "A light beige trench coat"}},
+        {"url": "https://images.unsplash.com/photo-1602293589914-9b29dfc2781d", "metadata": {"category": "bottom", "description": "A pair of classic blue jeans"}},
+        {"url": "https://images.unsplash.com/photo-1525966222134-fc3011e74978", "metadata": {"category": "shoes", "description": "A pair of classic black and white sneakers"}},
+        {"url": "https://images.unsplash.com/photo-1617137968427-4dd474f33979", "metadata": {"category": "top", "description": "A formal white button-down shirt"}}
     ]
-
-    # 3. 定義したアイテムをベクトル化してアップロード
-    logger.info(f"\n--- Uploading items for user '{test_user_id}' ---")
     for item in items_to_upload:
         try:
             response = requests.get(item["url"])
@@ -189,34 +208,49 @@ def main():
                 image_bytes=response.content,
                 user_id=test_user_id,
                 item_metadata=item["metadata"],
-                index=index,
-                model=model,
-                processor=processor
+                # ★★★ 必要な引数だけを明示的に渡す ★★★
+                index=services["index"],
+                model=services["model"],
+                processor=services["processor"]
             )
         except Exception as e:
             logger.error(f"Failed to process and upload from {item['url']}: {e}")
+    
+    time.sleep(10) # インデックスの更新を待つ
+    logger.info(f"Setup complete. Current index stats: {services['index'].describe_index_stats()}")
 
-    # 少し待ってインデックスの更新を反映させる
-    logger.info("Waiting for indexing to settle...")
-    time.sleep(10)
+    # --- 2. 服装提案の実行 ---
+    user_context = {
+        "schedule": "今夜、友人と京都のレストランでディナー",
+        "weather": {"temperature": 22, "condition": "晴れ"},
+        "preferences": "きれいめで、少しフォーマルなスタイルが良い。色はモノトーンが好き。",
+        "gender": "男性"
+    }
     
-    # 4. アップロードしたユーザーのアイテムの中から検索
-    search_queries = [
-        "a simple white t-shirt",
-        "classic blue jeans",
-        "a beige coat for autumn"
-    ]
-    
-    # ★修正箇所：forループでリストの各要素を一つずつ検索する
-    for query in search_queries:
-        search_items_for_user(
-            query=query, # ループ変数 `query` (文字列) を渡す
-            user_id=test_user_id,
-            index=index,
-            model=model,
-            processor=processor,
-            top_k=2
-        )
+    recommendation = get_outfit_recommendations(
+        user_id=test_user_id,
+        context=user_context,
+        services=services,
+        top_k_per_category=2
+    )
+
+    # --- 3. 結果の表示 ---
+    if recommendation:
+        print("\n\n" + "="*50)
+        logger.info("✨ AI Stylist's Final Recommendation ✨")
+        print("="*50)
+        logger.info(f"提案理由: {recommendation['reason']}")
+        
+        for category, items in recommendation['candidates'].items():
+            if items:
+                logger.info(f"\n--- Suggested {category.capitalize()} ---")
+                for i, item in enumerate(items):
+                    metadata = item['metadata']
+                    logger.info(
+                        f"  {i+1}. {metadata.get('description')} "
+                        f"(Score: {item['score']:.4f}, URL: {metadata.get('image_url')})"
+                    )
+        print("\n" + "="*50)
 
 if __name__ == "__main__":
     main()
