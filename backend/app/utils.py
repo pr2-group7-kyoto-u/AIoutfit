@@ -1,5 +1,6 @@
 import os
 import uuid
+import pycountry
 import requests
 from PIL import Image
 from io import BytesIO
@@ -17,6 +18,7 @@ from pinecone import Pinecone, ServerlessSpec
 MODEL_NAME = "openai/clip-vit-base-patch32"
 INDEX_NAME = "test" # インデックス名をより具体的に変更
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+WEATHER_API_KEY = "9696041de9748ec10b97a83a5f64dce3"
 dotenv.load_dotenv()
 
 # --- サービス初期化 ---
@@ -56,6 +58,8 @@ def initialize_services():
         
     index = pc.Index(INDEX_NAME)
     logger.info(f"Initial index stats: {index.describe_index_stats()}")
+    
+    WEATHER_API_KEY = os.getenv("WEATHER_API_KEY", WEATHER_API_KEY)
     
     return model, processor, index, openai_client
 
@@ -251,6 +255,52 @@ def main():
                         f"(Score: {item['score']:.4f}, URL: {metadata.get('image_url')})"
                     )
         print("\n" + "="*50)
+
+def get_weather_info(location: str, days_from_now: int) -> dict:
+    city = location.split(",")[0].strip()
+    country = location.split(",")[1].strip()
+    coordinate = get_lat_and_lon(city, country)
+    if not coordinate:
+        logger.warning(f"Could not find coordinates for {location}.")
+        return {"temperature": None, "condition": "不明"}
+    lat = coordinate[0]
+    lon = coordinate[1]
+
+    api = f"https://api.openweathermap.org/data/2.5/forecast/daily?lat={lat}&lon={lon}&cnt={days_from_now}&appid={WEATHER_API_KEY}"
+
+    try:
+        response = requests.get(api)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print(f"Error fetching weather data: {e}")
+        return {"temperature": None, "condition": "不明"}
+    
+    data = response.json()
+    if not data or "list" not in data:
+        print(f"No weather data found for {location}.")
+        return {"temperature": None, "condition": "不明"}
+    
+    return data["list"][days_from_now - 1]
+
+def get_lat_and_lon(city: str, country: str) -> tuple:
+    country_iso = pycountry.countries.get(name=country)
+    if not country_iso:
+        # try a fuzzy match
+        matches = [c for c in pycountry.countries if country.lower() in c.name.lower()]
+        country_iso = matches[0] if matches else None
+    if not country_iso:
+        return None
+    
+    api = f"https://api.openweathermap.org/geo/1.0/direct?q={city},{country_iso.alpha_2}&limit=1&appid={WEATHER_API_KEY}"
+    try:
+        response = requests.get(api)
+    except requests.RequestException as e:
+        logger.error(f"Error fetching location data: {response.status_code} - {response.text}")
+        return None
+    
+    data = response.json()
+    
+    return (data[0].get("lat"), data[0].get("lon"))
 
 if __name__ == "__main__":
     main()
