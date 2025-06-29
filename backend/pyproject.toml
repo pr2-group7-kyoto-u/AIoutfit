@@ -3,7 +3,7 @@ name = "backend"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<4.0"
 dependencies = [
     "flask>=3.1.1",
     "flask-cors>=6.0.1",
@@ -21,4 +21,5 @@ dependencies = [
     "torchvision>=0.22.1",
     "tqdm>=4.67.1",
     "transformers>=4.52.4",
+    "pycountry (>=24.6.1,<25.0.0)",
 ]
