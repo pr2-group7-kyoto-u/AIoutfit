@@ -18,7 +18,7 @@ from pinecone import Pinecone, ServerlessSpec
 MODEL_NAME = "openai/clip-vit-base-patch32"
 INDEX_NAME = "test" # インデックス名をより具体的に変更
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-WEATHER_API_KEY = "9696041de9748ec10b97a83a5f64dce3"
+WEATHER_API_KEY = ""
 dotenv.load_dotenv()
 
 # --- サービス初期化 ---
