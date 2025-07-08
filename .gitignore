@@ -6,4 +6,4 @@ backend/__pycache__/
 .pytest_cache/
 *.pycache
 *.log
-backend/uploads/
+backend/app/uploads/
