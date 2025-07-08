@@ -1,32 +1,51 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 from flask_cors import CORS
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import text
+from flask_jwt_extended import JWTManager
 import os
+
+
+print("--- DEBUG: app.py started loading ---", flush=True)
 
 from flask_migrate import Migrate
 
+# Models and Database imports
 from .models import Base, User, Cloth, OutfitSuggestion, UserPreference
-from .routes import register_routes
+from app.database import engine, SessionLocal, get_db_session, close_db_session, DATABASE_URL
+
+# Blueprint imports
+from app.routes.auth import auth_bp
+from app.routes.clothing import clothing_bp
+from app.routes.suggestion import suggestion_bp
 
 app = Flask(__name__)
 CORS(app)
 
-DATABASE_URL = os.getenv("DATABASE_URL", "mysql+mysqlconnector://outfit_user:outfit_password@db:3306/outfit_db")
-engine = create_engine(DATABASE_URL)
-Session = sessionmaker(bind=engine)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL 
+# Flask config for DB
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['DATABASE_URL'] = DATABASE_URL
 
-migrate = Migrate(app, Base.metadata)
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
-register_routes(app, Session)
+jwt = JWTManager(app)
 
+migrate = Migrate(app, db=engine)
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(clothing_bp)
+app.register_blueprint(suggestion_bp)
+
+# Database session management
+@app.teardown_request
+def teardown_db_session(exception):
+    close_db_session(exception)
+
+# Health check
 @app.route('/')
 def health_check():
+    session = get_db_session()
     try:
-        with engine.connect() as connection:
+        with session.connection() as connection:
             result = connection.execute(text("SELECT 1"))
             if result.scalar() == 1:
                 return jsonify({"status": "ok", "db_connection": "successful"}), 200
@@ -36,5 +55,4 @@ def health_check():
         return jsonify({"status": "error", "db_connection": f"failed: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    # 開発環境でのみ使用。本番ではGunicornが起動する
     app.run(debug=True, host='0.0.0.0', port=5000)

@@ -98,6 +98,9 @@ daily-outfit-app/
     # WEATHER_API_KEY=your_weather_api_key_here
     ```your_root_password_here` は開発用として分かりやすいパスワードに設定して構いません。
 
+    JWT_SECRET_KEY=super-secret-jwt-key-please-change-me-in-production
+
+
 ### 4.3. Docker環境の構築と起動
 
 Docker Composeを使用して、アプリケーションのサービス（MySQL, Flaskバックエンド, Reactフロントエンド）を構築・起動します。
