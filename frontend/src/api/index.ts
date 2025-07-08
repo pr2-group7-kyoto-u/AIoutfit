@@ -26,6 +26,14 @@ export interface Message {
   content: string;
 }
 
+export interface DialogueSlots {
+  [key: string]: string | null;
+}
+export interface HistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 const api = {
   register: (username: string, password: string) =>
     fetch('/api/register', {
@@ -92,6 +100,18 @@ const api = {
       method: 'POST',
       // 'message' ではなく 'messages' というキーで会話履歴全体を送信
       body: JSON.stringify({ messages }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
+
+  proposeOutfit: async (slots: DialogueSlots, history: HistoryMessage[], message: string) => {
+    const response = await fetchWithAuth('/api/propose', {
+      method: 'POST',
+      body: JSON.stringify({ slots, history, message }),
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
