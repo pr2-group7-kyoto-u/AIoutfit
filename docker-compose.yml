@@ -26,6 +26,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        JWT_SECRET_KEY: ${JWT_SECRET_KEY}
     container_name: daily-outfit-backend
     environment:
       DATABASE_URL: mysql+mysqlconnector://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}

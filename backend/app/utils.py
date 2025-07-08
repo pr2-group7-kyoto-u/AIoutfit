@@ -252,5 +252,10 @@ def main():
                     )
         print("\n" + "="*50)
 
+def get_weather_info(location: str, date: str) -> dict:
+    # ダミー応答 (開発用)
+    print(f"Fetching weather for {location} on {date}")
+    return {"temperature": 25, "condition": "晴れ"} 
+
 if __name__ == "__main__":
     main()

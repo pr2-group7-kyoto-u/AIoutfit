@@ -1,3 +1,27 @@
+// 認証付きのfetchリクエストを生成するヘルパー関数
+const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+  const headers = new Headers(options.headers);
+  headers.set('Content-Type', 'application/json');
+
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const response = await fetch(url, { ...options, headers });
+
+  if (response.status === 401 || response.status === 422) {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user_id');
+    localStorage.removeItem('username');
+    window.location.href = '/login';
+    return Promise.reject(new Error('Session expired'));
+  }
+
+  return response;
+};
+
+
 const api = {
   register: (username: string, password: string) =>
     fetch('/api/register', {
@@ -13,29 +37,51 @@ const api = {
       body: JSON.stringify({ username, password }),
     }).then(res => res.json()),
 
-  addCloth: (userId: number, clothData: any) =>
-    fetch('/api/clothes', {
+
+  getClothes: async (userId: number) => {
+    const response = await fetchWithAuth(`/api/clothes/${userId}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
+
+  addCloth: async (userId: number, clothData: any) => {
+    const response = await fetchWithAuth('/api/clothes', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: userId, ...clothData }),
-    }).then(res => res.json()),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
 
-  getClothes: (userId: number) =>
-    fetch(`/api/clothes/${userId}`).then(res => res.json()),
-
-  suggestOutfits: (userId: number, date: string, occasion: string, location: string) =>
-    fetch('/api/suggest_outfits', {
+  suggestOutfits: async (userId: number, date: string, occasion: string, location: string) => {
+    const response = await fetchWithAuth('/api/suggest_outfits', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: userId, date, occasion, location }),
-    }).then(res => res.json()),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
 
-  updateUserPreferences: (userId: number, preferences: any) =>
-    fetch(`/api/user_preferences/${userId}`, {
+  updateUserPreferences: async (userId: number, preferences: any) => {
+    const response = await fetchWithAuth(`/api/user_preferences/${userId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(preferences),
-    }).then(res => res.json()),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
 };
 
 export default api;

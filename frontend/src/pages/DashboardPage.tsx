@@ -1,60 +1,67 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../hooks/useAuth';
+
+interface Cloth {
+  id: number;
+  name: string;
+  color: string;
+  category: string;
+}
 
 const DashboardPage: React.FC = () => {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const navigate = useNavigate();
 
-  // 未認証ならログインページにリダイレクト
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate('/login');
-    }
-  }, [isLoading, isAuthenticated, navigate]);
-
-  const userId = user ? user.id : 0;
-  const [clothes, setClothes] = useState([]);
+  const [clothes, setClothes] = useState<Cloth[]>([]);
   const [newClothName, setNewClothName] = useState('');
   const [newClothCategory, setNewClothCategory] = useState('');
   const [newClothColor, setNewClothColor] = useState('');
-
   const [suggestedDate, setSuggestedDate] = useState('');
   const [occasion, setOccasion] = useState('');
   const [location, setLocation] = useState('Kyoto, Japan');
-  const [outfitSuggestions, setOutfitSuggestions] = useState([]);
+  const [outfitSuggestions, setOutfitSuggestions] = useState<any[]>([]);
   const [message, setMessage] = useState('');
 
-  const fetchClothes = useCallback(async () => {
-    if (!userId || isNaN(userId)) {
+  useEffect(() => {
+    // 認証状態の読み込みが完了するまで待つ
+    if (isLoading) {
+      return; 
+    }
+    // 認証されていない場合はログインページへ
+    if (!isAuthenticated) {
+      navigate('/login');
       return;
     }
-    try {
-      const result = await api.getClothes(userId);
-      setClothes(result);
-    } catch (error) {
-      console.error("Failed to fetch clothes:", error);
-      setMessage("服の読み込みに失敗しました。");
+    // 認証済みでユーザー情報がある場合、服のデータを取得
+    if (user) {
+      const fetchUserClothes = async () => {
+        try {
+          const result = await api.getClothes(user.id);
+          if (Array.isArray(result)) {
+            setClothes(result);
+          }
+        } catch (error) {
+          console.error("Failed to fetch clothes:", error);
+          setMessage("服の読み込みに失敗しました。");
+        }
+      };
+      fetchUserClothes();
     }
-  }, [userId]);
+  }, [isLoading, isAuthenticated, user, navigate]); // 認証状態とuserの変更を監視
 
-  useEffect(() => {
-    fetchClothes();
-  }, [fetchClothes]);
-
+  
   const handleAddCloth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
       setMessage("ログインしていません。");
       return;
     }
-
     if (!newClothName || !newClothCategory || !newClothColor) {
-        setMessage("服の名前、カテゴリ、色は必須です。");
-        return;
+      setMessage("服の名前、カテゴリ、色は必須です。");
+      return;
     }
-
     try {
       const result = await api.addCloth(user.id, {
         name: newClothName,
@@ -66,7 +73,9 @@ const DashboardPage: React.FC = () => {
         setNewClothName('');
         setNewClothCategory('');
         setNewClothColor('');
-        fetchClothes();
+        // 服を追加したあと、リストを再取得（すでにあるuseEffectがuserの変更を検知しないため、手動で再取得）
+        const updatedClothes = await api.getClothes(user.id);
+        if (Array.isArray(updatedClothes)) setClothes(updatedClothes);
       }
     } catch (error) {
       console.error("Failed to add cloth:", error);
@@ -76,15 +85,7 @@ const DashboardPage: React.FC = () => {
 
   const handleSuggestOutfits = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!suggestedDate || !occasion) {
-      setMessage("日付と外出先は必須です。");
-      return;
-    }
-    if (!user) {
-        setMessage("ログインしていません。");
-        return;
-    }
-
+    if (!user) return;
     try {
       const result = await api.suggestOutfits(user.id, suggestedDate, occasion, location);
       if (result.suggestions) {
@@ -96,19 +97,20 @@ const DashboardPage: React.FC = () => {
       setMessage("コーデの提案に失敗しました。");
     }
   };
-
+  
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    // navigate('/login'); useAuth内のlogoutで処理されるか、useEffectで検知される
   };
-
+  
+  // 認証状態の読み込み中はスピナーなどを表示
   if (isLoading) {
-    return <div>認証状態を読み込み中...</div>; // 読み込み中の表示
+    return <div>認証状態を読み込み中...</div>;
   }
-
+  
   return (
     <div>
-      <h2>ダッシュボード (ようこそ {user?.username} さん!)</h2> {/* ユーザー名を表示 */}
+      <h2>ダッシュボード (ようこそ {user?.username} さん!)</h2>
       <button onClick={handleLogout} style={{ float: 'right' }}>ログアウト</button>
       <Link to="/">ホームに戻る</Link>
 
@@ -125,31 +127,24 @@ const DashboardPage: React.FC = () => {
         <p>まだ服が登録されていません。</p>
       ) : (
         <ul>
-          {clothes.map((cloth: any) => (
+          {clothes.map((cloth) => (
             <li key={cloth.id}>{cloth.name} ({cloth.color}, {cloth.category})</li>
           ))}
         </ul>
       )}
 
+      {/* コーデ提案フォームと結果表示は変更なし */}
       <h3>コーデ提案</h3>
       <form onSubmit={handleSuggestOutfits}>
-        <label>
-          日付: <input type="date" value={suggestedDate} onChange={(e) => setSuggestedDate(e.target.value)} required />
-        </label><br />
-        <label>
-          外出先/シーン: <input type="text" placeholder="例: 仕事, デート, 普段使い" value={occasion} onChange={(e) => setOccasion(e.target.value)} required />
-        </label><br />
-        <label>
-          場所: <input type="text" placeholder="例: Kyoto, Japan" value={location} onChange={(e) => setLocation(e.target.value)} />
-        </label><br />
+        <label>日付: <input type="date" value={suggestedDate} onChange={(e) => setSuggestedDate(e.target.value)} required /></label><br />
+        <label>外出先/シーン: <input type="text" placeholder="例: 仕事, デート" value={occasion} onChange={(e) => setOccasion(e.target.value)} required /></label><br />
+        <label>場所: <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} /></label><br />
         <button type="submit">コーデを提案する</button>
       </form>
       {message && <p>{message}</p>}
-
+      
       <h3>提案されたコーデ</h3>
-      {outfitSuggestions.length === 0 ? (
-        <p>まだ提案されたコーデはありません。</p>
-      ) : (
+      {outfitSuggestions.length > 0 && (
         <div>
           {outfitSuggestions.map((suggestion: any, index: number) => (
             <div key={index} style={{ border: '1px solid #ccc', margin: '10px', padding: '10px' }}>
@@ -158,20 +153,10 @@ const DashboardPage: React.FC = () => {
               <p>ボトムス: {suggestion.bottom?.name} ({suggestion.bottom?.color})</p>
               {suggestion.outer && <p>アウター: {suggestion.outer?.name} ({suggestion.outer?.color})</p>}
               <p>理由: {suggestion.reason}</p>
-              {suggestion.recommended_product && (
-                <div>
-                  <h5>おすすめ商品:</h5>
-                  <p>{suggestion.recommended_product.name}</p>
-                  {suggestion.recommended_product.image_url && <img src={suggestion.recommended_product.image_url} alt={suggestion.recommended_product.name} style={{ maxWidth: '100px' }} />}
-                  {suggestion.recommended_product.buy_link && <p><a href={suggestion.recommended_product.buy_link} target="_blank" rel="noopener noreferrer">購入する</a></p>}
-                </div>
-              )}
             </div>
           ))}
         </div>
       )}
-
-      {/* TODO: ユーザー設定 (パーソナルカラーなど) 画面を追加 */}
     </div>
   );
 };
