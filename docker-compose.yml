@@ -29,6 +29,8 @@ services:
       args:
         JWT_SECRET_KEY: ${JWT_SECRET_KEY}
     container_name: daily-outfit-backend
+    env_file:
+      - .env
     environment:
       DATABASE_URL: mysql+mysqlconnector://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}
       # LLM_API_KEY: ${LLM_API_KEY}
