@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../hooks/useAuth';
+import ImageUpload from '../components/ImageUpload';
 
 interface Cloth {
   id: number;
@@ -23,6 +24,7 @@ const DashboardPage: React.FC = () => {
   const [location, setLocation] = useState('Kyoto, Japan');
   const [outfitSuggestions, setOutfitSuggestions] = useState<any[]>([]);
   const [message, setMessage] = useState('');
+  const [uploadedImageUrl, setUploadedImageUrl] = useState('');
 
   useEffect(() => {
     // 認証状態の読み込みが完了するまで待つ
@@ -107,6 +109,11 @@ const DashboardPage: React.FC = () => {
   if (isLoading) {
     return <div>認証状態を読み込み中...</div>;
   }
+
+  const handleUploadSuccess = (data: { image_url: string }) => {
+    console.log('アップロード成功:', data);
+    setUploadedImageUrl(data.image_url);
+  };
   
   return (
     <div>
@@ -131,6 +138,16 @@ const DashboardPage: React.FC = () => {
             <li key={cloth.id}>{cloth.name} ({cloth.color}, {cloth.category})</li>
           ))}
         </ul>
+      )}
+
+      <hr />
+      <h3>画像のアップロードテスト</h3>
+      <ImageUpload onUploadSuccess={handleUploadSuccess} />
+      {uploadedImageUrl && (
+        <div>
+          <h4>アップロードされた画像:</h4>
+          <img src={uploadedImageUrl} alt="アップロードされた画像" style={{ maxWidth: '200px' }} />
+        </div>
       )}
 
       {/* コーデ提案フォームと結果表示は変更なし */}

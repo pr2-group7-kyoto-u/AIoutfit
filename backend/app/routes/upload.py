@@ -1,5 +1,5 @@
 import os
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required
 from werkzeug.utils import secure_filename
 
@@ -13,7 +13,7 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@upload_bp.route('/upload', methods=['POST'])
+@upload_bp.route('/api/upload', methods=['POST'])
 @jwt_required()
 def upload_image():
     # リクエストにファイルパートがあるかチェック
@@ -31,7 +31,7 @@ def upload_image():
         # 安全なファイル名を生成
         filename = secure_filename(file.filename)
         # 保存パスを生成 (app.pyの場所を基準とする)
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        save_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
         
         try:
             file.save(save_path)

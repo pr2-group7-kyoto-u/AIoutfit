@@ -1,11 +1,14 @@
 // 認証付きのfetchリクエストを生成するヘルパー関数
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   const headers = new Headers(options.headers);
-  headers.set('Content-Type', 'application/json');
 
   const token = localStorage.getItem('access_token');
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  if (!(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
   }
 
   const response = await fetch(url, { ...options, headers });
@@ -76,6 +79,22 @@ const api = {
       method: 'PUT',
       body: JSON.stringify(preferences),
     });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
+  uploadImage: async (imageFile: File) => {
+    // FormDataオブジェクトを作成して、ファイルを追加
+    const formData = new FormData();
+    formData.append('image', imageFile);
+
+    const response = await fetchWithAuth('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
       throw new Error(errorData.message);

@@ -1,11 +1,8 @@
-from flask import Flask, request, jsonify, g
+from flask import Flask, request, jsonify, g, send_from_directory
 from flask_cors import CORS
 from sqlalchemy import text
 from flask_jwt_extended import JWTManager
 import os
-
-
-print("--- DEBUG: app.py started loading ---", flush=True)
 
 from flask_migrate import Migrate
 
@@ -17,9 +14,15 @@ from app.database import engine, SessionLocal, get_db_session, close_db_session,
 from app.routes.auth import auth_bp
 from app.routes.clothing import clothing_bp
 from app.routes.suggestion import suggestion_bp
+from app.routes.upload import upload_bp
 
 app = Flask(__name__)
 CORS(app)
+
+UPLOAD_FOLDER_PATH = os.path.join(os.getcwd(), 'uploads')
+if not os.path.exists(UPLOAD_FOLDER_PATH):
+    os.makedirs(UPLOAD_FOLDER_PATH)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER_PATH
 
 # Flask config for DB
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
@@ -34,11 +37,16 @@ migrate = Migrate(app, db=engine)
 app.register_blueprint(auth_bp)
 app.register_blueprint(clothing_bp)
 app.register_blueprint(suggestion_bp)
+app.register_blueprint(upload_bp)
 
 # Database session management
 @app.teardown_request
 def teardown_db_session(exception):
     close_db_session(exception)
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # Health check
 @app.route('/')
