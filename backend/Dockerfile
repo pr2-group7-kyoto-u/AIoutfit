@@ -23,4 +23,4 @@ ENV PATH="/usr/local/bin:/usr/local/sbin:/usr/local/lib/python3.12/site-packages
 COPY app/ app/
 
 # Gunicorn CMD
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--log-level", "debug", "--access-logfile", "-", "app.app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--timeout", "120", "--log-level", "debug", "--access-logfile", "-", "app.app:app"]

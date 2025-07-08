@@ -21,6 +21,18 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   return response;
 };
 
+export interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface DialogueSlots {
+  [key: string]: string | null;
+}
+export interface HistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 const api = {
   register: (username: string, password: string) =>
@@ -75,6 +87,31 @@ const api = {
     const response = await fetchWithAuth(`/api/user_preferences/${userId}`, {
       method: 'PUT',
       body: JSON.stringify(preferences),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
+
+  chatWithAI: async (messages: Message[]) => {
+    const response = await fetchWithAuth('/api/chat', {
+      method: 'POST',
+      // 'message' ではなく 'messages' というキーで会話履歴全体を送信
+      body: JSON.stringify({ messages }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
+
+  proposeOutfit: async (slots: DialogueSlots, history: HistoryMessage[], message: string) => {
+    const response = await fetchWithAuth('/api/propose', {
+      method: 'POST',
+      body: JSON.stringify({ slots, history, message }),
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));

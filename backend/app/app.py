@@ -17,6 +17,7 @@ from app.database import engine, SessionLocal, get_db_session, close_db_session,
 from app.routes.auth import auth_bp
 from app.routes.clothing import clothing_bp
 from app.routes.suggestion import suggestion_bp
+from app.routes.chat import chat_bp
 
 app = Flask(__name__)
 CORS(app)
@@ -34,6 +35,7 @@ migrate = Migrate(app, db=engine)
 app.register_blueprint(auth_bp)
 app.register_blueprint(clothing_bp)
 app.register_blueprint(suggestion_bp)
+app.register_blueprint(chat_bp)
 
 # Database session management
 @app.teardown_request

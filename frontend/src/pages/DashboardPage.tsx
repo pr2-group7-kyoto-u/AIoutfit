@@ -112,6 +112,9 @@ const DashboardPage: React.FC = () => {
     <div>
       <h2>ダッシュボード (ようこそ {user?.username} さん!)</h2>
       <button onClick={handleLogout} style={{ float: 'right' }}>ログアウト</button>
+      <br/>
+      <Link to="/suggest">AIとコーデを相談する</Link> 
+      <br/>
       <Link to="/">ホームに戻る</Link>
 
       <h3>服の登録</h3>
