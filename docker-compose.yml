@@ -12,7 +12,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - db_data:/var/lib/mysql # 永続化のためのボリューム
+      - db_data:/var/lib/mysql
     ports:
       - "3306:3306"
     healthcheck:
@@ -26,20 +26,23 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      args:
-        JWT_SECRET_KEY: ${JWT_SECRET_KEY}
     container_name: daily-outfit-backend
     environment:
       DATABASE_URL: mysql+mysqlconnector://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}
-      # LLM_API_KEY: ${LLM_API_KEY}
-      # WEATHER_API_KEY: ${WEATHER_API_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      S3_BUCKET_NAME: images
     ports:
       - "5001:5000"
     volumes:
       - ./backend:/app
     depends_on:
       db:
-        condition: service_healthy # DBが起動してからバックエンドを起動
+        condition: service_healthy
+      minio:
+        condition: service_healthy
 
   # React フロントエンドサービス
   frontend:
@@ -48,9 +51,45 @@ services:
       dockerfile: Dockerfile
     container_name: daily-outfit-frontend
     ports:
-      - "80:80" # Nginxのデフォルトポート
+      - "80:80"
     depends_on:
-      - backend # フロントエンドがバックエンドに依存
+      - backend
+    volumes:
+      - minio_data:/var/www/minio_data
+
+  # MinIO オブジェクトストレージサービス
+  minio:
+    image: minio/minio:latest
+    container_name: daily-outfit-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_CORS_ALLOW_ORIGIN: "*"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  create-buckets:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
+      /usr/bin/mc mb myminio/images --ignore-existing;
+      /usr/bin/mc anonymous set public myminio/images;
+      echo 'MinIO setup complete.';
+      "
 
 volumes:
-  db_data: # MySQLデータボリュームの定義
+  db_data:
+  minio_data:

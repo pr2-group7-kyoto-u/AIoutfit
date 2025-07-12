@@ -2,13 +2,15 @@
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   const headers = new Headers(options.headers);
 
-  const token = localStorage.getItem('access_token');
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
-
+  // bodyがFormDataのインスタンスでない場合のみ、Content-Typeをセットする
   if (!(options.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
+  }
+
+  const token = localStorage.getItem('access_token');
+
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
   }
 
   const response = await fetch(url, { ...options, headers });
@@ -40,7 +42,6 @@ const api = {
       body: JSON.stringify({ username, password }),
     }).then(res => res.json()),
 
-
   getClothes: async (userId: number) => {
     const response = await fetchWithAuth(`/api/clothes/${userId}`);
     if (!response.ok) {
@@ -50,10 +51,19 @@ const api = {
     return response.json();
   },
 
-  addCloth: async (userId: number, clothData: any) => {
+  addCloth: async (clothData: { [key: string]: any }, imageFile: File | null) => {
+    const formData = new FormData();
+    Object.keys(clothData).forEach(key => {
+      if (clothData[key] != null) {
+        formData.append(key, String(clothData[key]));
+      }
+    });
+    if (imageFile) {
+      formData.append('image', imageFile);
+    }
     const response = await fetchWithAuth('/api/clothes', {
       method: 'POST',
-      body: JSON.stringify({ user_id: userId, ...clothData }),
+      body: formData,
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
@@ -79,22 +89,6 @@ const api = {
       method: 'PUT',
       body: JSON.stringify(preferences),
     });
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
-      throw new Error(errorData.message);
-    }
-    return response.json();
-  },
-  uploadImage: async (imageFile: File) => {
-    // FormDataオブジェクトを作成して、ファイルを追加
-    const formData = new FormData();
-    formData.append('image', imageFile);
-
-    const response = await fetchWithAuth('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
       throw new Error(errorData.message);

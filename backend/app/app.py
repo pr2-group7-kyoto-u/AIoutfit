@@ -32,7 +32,7 @@ app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
 jwt = JWTManager(app)
 
-migrate = Migrate(app, db=engine)
+migrate = Migrate(app, Base.metadata)
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(clothing_bp)
