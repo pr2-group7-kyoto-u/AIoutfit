@@ -1,9 +1,14 @@
 // 認証付きのfetchリクエストを生成するヘルパー関数
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   const headers = new Headers(options.headers);
-  headers.set('Content-Type', 'application/json');
+
+  // bodyがFormDataのインスタンスでない場合のみ、Content-Typeをセットする
+  if (!(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
 
   const token = localStorage.getItem('access_token');
+
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
@@ -21,6 +26,18 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   return response;
 };
 
+export interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface DialogueSlots {
+  [key: string]: string | null;
+}
+export interface HistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
 
 const api = {
   register: (username: string, password: string) =>
@@ -37,7 +54,6 @@ const api = {
       body: JSON.stringify({ username, password }),
     }).then(res => res.json()),
 
-
   getClothes: async (userId: number) => {
     const response = await fetchWithAuth(`/api/clothes/${userId}`);
     if (!response.ok) {
@@ -47,10 +63,19 @@ const api = {
     return response.json();
   },
 
-  addCloth: async (userId: number, clothData: any) => {
+  addCloth: async (clothData: { [key: string]: any }, imageFile: File | null) => {
+    const formData = new FormData();
+    Object.keys(clothData).forEach(key => {
+      if (clothData[key] != null) {
+        formData.append(key, String(clothData[key]));
+      }
+    });
+    if (imageFile) {
+      formData.append('image', imageFile);
+    }
     const response = await fetchWithAuth('/api/clothes', {
       method: 'POST',
-      body: JSON.stringify({ user_id: userId, ...clothData }),
+      body: formData,
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
@@ -75,6 +100,31 @@ const api = {
     const response = await fetchWithAuth(`/api/user_preferences/${userId}`, {
       method: 'PUT',
       body: JSON.stringify(preferences),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
+
+  chatWithAI: async (messages: Message[]) => {
+    const response = await fetchWithAuth('/api/chat', {
+      method: 'POST',
+      // 'message' ではなく 'messages' というキーで会話履歴全体を送信
+      body: JSON.stringify({ messages }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
+
+  proposeOutfit: async (slots: DialogueSlots, history: HistoryMessage[], message: string) => {
+    const response = await fetchWithAuth('/api/propose', {
+      method: 'POST',
+      body: JSON.stringify({ slots, history, message }),
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
