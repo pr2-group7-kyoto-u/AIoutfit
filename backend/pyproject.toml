@@ -23,4 +23,5 @@ dependencies = [
     "tqdm>=4.67.1",
     "transformers>=4.52.4",
     "pycountry (>=24.6.1,<25.0.0)",
+    "boto3>=1.39.3",
 ]
