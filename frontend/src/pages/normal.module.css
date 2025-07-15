@@ -1,0 +1,50 @@
+.normalBackground {
+  background-image: url('../assets/cool_digital02.png');
+  background-size: cover; /* 画像が領域全体をカバーするように拡大縮小 */
+  background-position: center; /* 画像を中央に配置 */
+  background-repeat: no-repeat; /* 画像の繰り返しを防ぐ */
+  min-height: 100vh;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #fff; /* 暗い背景でのコントラストを良くするための白色テキスト */
+  text-align: center;
+  padding: 20px;
+  box-sizing: border-box; /* パディングを要素の合計幅と高さに含める */
+}
+
+.normalBackground h1 {
+  font-size: 3em; /* より大きな見出し */
+  margin-bottom: 20px;
+}
+
+.normalBackground p {
+  font-size: 1.2em;
+  margin-bottom: 30px;
+}
+
+.normalBackground ul {
+  list-style: none; /* 箇条書きを削除 */
+  padding: 0;
+}
+
+.normalBackground li {
+  margin-bottom: 15px;
+}
+
+.normalBackground a {
+  text-decoration: none; /* 下線を削除 */
+  color: #f0f0f0; /* リンクの薄い灰色 */
+  font-weight: bold;
+  padding: 10px 20px;
+  border: 2px solid #f0f0f0;
+  border-radius: 5px;
+  transition: all 0.3s ease; /* ホバー効果のための滑らかなトランジション */
+}
+
+.normalBackground a:hover {
+  background-color: rgba(255, 255, 255, 0.2); /* ホバー時のわずかな背景 */
+  color: #fff;
+}
