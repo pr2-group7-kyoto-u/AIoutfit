@@ -34,7 +34,7 @@ def seed_data():
         # ユーザーが既に存在しないかチェックしてから追加する（冪等性を高める）
         if not session.query(User).filter_by(username="testuser1").first():
             user1_password_hash = generate_password_hash("password123")
-            user1 = User(username="testuser1", password_hash=user1_password_hash, preferred_style="カジュアル, シンプル")
+            user1 = User(username="testuser1", password_hash=user1_password_hash, age="25", gender="男性", preferred_style="カジュアル, シンプル")
             session.add(user1)
             session.commit()
             print(f"Added user: {user1.username} (ID: {user1.id})")
@@ -44,7 +44,7 @@ def seed_data():
 
         if not session.query(User).filter_by(username="stylish_dev").first():
             user2_password_hash = generate_password_hash("securepass")
-            user2 = User(username="stylish_dev", password_hash=user2_password_hash, preferred_style="きれいめ, モード")
+            user2 = User(username="stylish_dev", password_hash=user2_password_hash, age="30", gender="女性", preferred_style="きれいめ, モード")
             session.add(user2)
             session.commit()
             print(f"Added user: {user2.username} (ID: {user2.id})")

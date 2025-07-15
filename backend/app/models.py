@@ -9,6 +9,8 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
+    age = Column(String(10))
+    gender = Column(String(10))
     preferred_style = Column(String(255))
     created_at = Column(DateTime, default=func.now())
 
