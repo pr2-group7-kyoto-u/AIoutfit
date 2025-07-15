@@ -12,7 +12,7 @@ except Exception as e:
     print(f"サービス初期化エラー: {e}")
     openai_client = None
 
-def create_iterative_system_prompt(whether_info: str = None) -> str:
+def create_iterative_system_prompt(weather_info: str = None) -> str:
     """
     AIに「提案」と「次の質問」を強制的に分離・生成させるためのシステムプロンプト。
     """
@@ -34,7 +34,7 @@ def create_iterative_system_prompt(whether_info: str = None) -> str:
       "bottoms": "提案するボトムスのアイテム名"(デフォルトはジーンズ),
       "shoes": "提案する靴のアイテム名（デフォルトはスニーカー）"
   }},
-  weather_info: "{whether_info}" if whether_info else "現在の天気情報はありません",
+  weather_info: "{weather_info}" if weather_info else "現在の天気情報はありません",
   "updated_slots": {{
       "date": "収集した日付情報 or null",
       "location_geo": "収集した地理情報 or null",
@@ -52,6 +52,8 @@ def create_iterative_system_prompt(whether_info: str = None) -> str:
 - `text`: 提案の枕詞や感想などをここに記述します。コーデ提案の内容もここに含めてください。
 - `next_question`: **必須項目。** コーデを洗練させるために、次に追加で聞きたい質問を一つだけ、ここに記述します。ユーザーが「確定」と言わない限り、必ず何か質問を入れてください。
 - `suggestion_items`: **必須項目。** トップス、ボトムス、靴を必ず提案してください。ワンピース等はtopsとbottomsに同じ名前を入れてください。
+- `updated_slots`: ユーザーから得た情報をここに更新してください。新しい情報がない場合は、nullを入れてください。
+- `weather_info`: 現在の天気情報をここに入れてください。コーデの提案の際に活用してください。
 - `type`: ユーザーが「確定」「それがいい」など明確な同意を示した場合のみ `"final_suggestion"` としてください。それ以外は常に `"suggestion"` です。
 
 # 例
@@ -83,7 +85,7 @@ def propose_outfit():
     weather_info = get_weather_info(('Kyoto, Japan'), 10)
     logger.info(f"Weather info: {weather_info}")
     messages_for_api = [
-        {"role": "system", "content": create_iterative_system_prompt(whether_info=weather_info)},
+        {"role": "system", "content": create_iterative_system_prompt(weather_info=weather_info)},
     ]
     # 過去の履歴をコンテキストに含める
     if history:
