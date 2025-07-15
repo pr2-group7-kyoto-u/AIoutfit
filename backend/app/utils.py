@@ -14,12 +14,14 @@ import torch
 from transformers import CLIPModel, CLIPProcessor
 from pinecone import Pinecone, ServerlessSpec
 
+# Load environment variables once at module level
+dotenv.load_dotenv()
+
 # --- グローバル設定 ---
 MODEL_NAME = "openai/clip-vit-base-patch32"
 INDEX_NAME = "test" # インデックス名をより具体的に変更
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-WEATHER_API_KEY = ""
-dotenv.load_dotenv()
+# WEATHER_API_KEYは必要に応じてos.getenvで直接取得するか、引数として渡す
 
 # --- サービス初期化 ---
 def initialize_services():
@@ -29,7 +31,7 @@ def initialize_services():
 
     # Pineconeクライアントの初期化
     pinecone_api_key = os.getenv("PINECONE_API_KEY")
-    pinecone_environment = os.getenv("PINECONE_ENVIRONMENT", "us-west1-gcp")
+    pinecone_environment = os.getenv("PINECONE_ENVIRONMENT", "us-west1-gcp") # Changed default region to match spec
     
     if not pinecone_api_key:
         raise ValueError("PINECONE_API_KEY environment variable not set")
@@ -59,8 +61,8 @@ def initialize_services():
     index = pc.Index(INDEX_NAME)
     logger.info(f"Initial index stats: {index.describe_index_stats()}")
     
-    WEATHER_API_KEY = os.getenv("WEATHER_API_KEY", WEATHER_API_KEY)
-    
+    # 問題の行を削除: WEATHER_API_KEY = os.getenv("WEATHER_API_KEY", WEATHER_API_KEY)
+
     return model, processor, index, openai_client
 
 # --- 低レベルヘルパー関数 (ベクトル化・ファイル保存) ---
@@ -259,14 +261,21 @@ def main():
 def get_weather_info(location: str, days_from_now: int) -> dict:
     city = location.split(",")[0].strip()
     country = location.split(",")[1].strip()
-    coordinate = get_lat_and_lon(city, country)
+    
+    # Fetch API key directly here
+    weather_api_key = os.getenv("WEATHER_API_KEY")
+    if not weather_api_key:
+        logger.error("WEATHER_API_KEY environment variable not set. Cannot fetch weather info.")
+        return {"temperature": None, "condition": "不明"}
+
+    coordinate = get_lat_and_lon(city, country, weather_api_key) # Pass API key
     if not coordinate:
         logger.warning(f"Could not find coordinates for {location}.")
         return {"temperature": None, "condition": "不明"}
     lat = coordinate[0]
     lon = coordinate[1]
 
-    api = f"https://api.openweathermap.org/data/2.5/forecast/daily?lat={lat}&lon={lon}&cnt={days_from_now}&appid={WEATHER_API_KEY}"
+    api = f"https://api.openweathermap.org/data/2.5/forecast/daily?lat={lat}&lon={lon}&cnt={days_from_now}&appid={weather_api_key}"
 
     try:
         response = requests.get(api)
@@ -282,7 +291,7 @@ def get_weather_info(location: str, days_from_now: int) -> dict:
     
     return data["list"][days_from_now - 1]
 
-def get_lat_and_lon(city: str, country: str) -> tuple:
+def get_lat_and_lon(city: str, country: str, weather_api_key: str) -> tuple: # Add weather_api_key parameter
     country_iso = pycountry.countries.get(name=country)
     if not country_iso:
         # try a fuzzy match
@@ -291,7 +300,7 @@ def get_lat_and_lon(city: str, country: str) -> tuple:
     if not country_iso:
         return None
     
-    api = f"https://api.openweathermap.org/geo/1.0/direct?q={city},{country_iso.alpha_2}&limit=1&appid={WEATHER_API_KEY}"
+    api = f"https://api.openweathermap.org/geo/1.0/direct?q={city},{country_iso.alpha_2}&limit=1&appid={weather_api_key}" # Use passed API key
     try:
         response = requests.get(api)
     except requests.RequestException as e:
@@ -299,6 +308,8 @@ def get_lat_and_lon(city: str, country: str) -> tuple:
         return None
     
     data = response.json()
+    if not data: # Add check for empty data
+        return None
     
     return (data[0].get("lat"), data[0].get("lon"))
 
