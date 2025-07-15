@@ -5,7 +5,6 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # 必要なパッケージをインストール
-# uvを先にインストール
 RUN pip install uv
 
 # pyproject.tomlとuv.lockをコピー
@@ -17,9 +16,8 @@ RUN uv pip install --system --no-cache -r pyproject.toml
 # アプリケーションのコードをコピー
 COPY . .
 
-# ★★★ entrypoint.shをコピーし、実行権限を付与 ★★★
-COPY ./entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+# Flaskアプリの環境変数を設定（flask db upgradeに必要）
+ENV FLASK_APP=app.app
 
-# コンテナ起動時にentrypoint.shを実行するように設定
-ENTRYPOINT ["/app/entrypoint.sh"]
+# マイグレーション → Gunicorn 起動（ && を使って一行で）
+ENTRYPOINT flask db upgrade && gunicorn --config /app/gunicorn.conf.py app.app:app
