@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
-from app.utils import initialize_services
+from app.utils import initialize_services, get_weather_info
 import json
+from loguru import logger
 
 chat_bp = Blueprint('chat', __name__)
 
@@ -11,7 +12,7 @@ except Exception as e:
     print(f"サービス初期化エラー: {e}")
     openai_client = None
 
-def create_iterative_system_prompt():
+def create_iterative_system_prompt(whether_info: str = None) -> str:
     """
     AIに「提案」と「次の質問」を強制的に分離・生成させるためのシステムプロンプト。
     """
@@ -29,10 +30,11 @@ def create_iterative_system_prompt():
   "text": "(コーデ提案を含む)ユーザーへの親しみやすいメッセージ",
   "next_question": "(次に聞くべき)ユーザーへの具体的な質問文",
   "suggestion_items": {{
-      "tops": "提案するトップスのアイテム名",
-      "bottoms": "提案するボトムスのアイテム名",
-      "shoes": "提案する靴のアイテム名"
+      "tops": "提案するトップスのアイテム名"（デフォルトは白の無地T）,
+      "bottoms": "提案するボトムスのアイテム名"(デフォルトはジーンズ),
+      "shoes": "提案する靴のアイテム名（デフォルトはスニーカー）"
   }},
+  weather_info: "{whether_info}" if whether_info else "現在の天気情報はありません",
   "updated_slots": {{
       "date": "収集した日付情報 or null",
       "location_geo": "収集した地理情報 or null",
@@ -77,9 +79,11 @@ def propose_outfit():
 
     if not user_message:
         return jsonify({"message": "メッセージは必須です。"}), 400
-
+    
+    weather_info = get_weather_info(('Kyoto, Japan'), 10)
+    logger.info(f"Weather info: {weather_info}")
     messages_for_api = [
-        {"role": "system", "content": create_iterative_system_prompt()},
+        {"role": "system", "content": create_iterative_system_prompt(whether_info=weather_info)},
     ]
     # 過去の履歴をコンテキストに含める
     if history:
