@@ -3,45 +3,47 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { useAuth } from '../hooks/useAuth';
 
+// Cloth（服）の型を定義
 interface Cloth {
   id: number;
   name: string;
   color: string;
   category: string;
+  image_url?: string; // 画像URLはオプショナル
 }
 
 const DashboardPage: React.FC = () => {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const navigate = useNavigate();
 
+  // stateの定義
   const [clothes, setClothes] = useState<Cloth[]>([]);
+  const [message, setMessage] = useState('');
+
+  // 服登録フォーム用のstate
   const [newClothName, setNewClothName] = useState('');
   const [newClothCategory, setNewClothCategory] = useState('');
   const [newClothColor, setNewClothColor] = useState('');
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+
+  // コーデ提案フォーム用のstate
   const [suggestedDate, setSuggestedDate] = useState('');
   const [occasion, setOccasion] = useState('');
   const [location, setLocation] = useState('Kyoto, Japan');
   const [outfitSuggestions, setOutfitSuggestions] = useState<any[]>([]);
-  const [message, setMessage] = useState('');
 
+  // 認証状態の確認とデータ取得
   useEffect(() => {
-    // 認証状態の読み込みが完了するまで待つ
-    if (isLoading) {
-      return; 
-    }
-    // 認証されていない場合はログインページへ
+    if (isLoading) return;
     if (!isAuthenticated) {
       navigate('/login');
       return;
     }
-    // 認証済みでユーザー情報がある場合、服のデータを取得
     if (user) {
       const fetchUserClothes = async () => {
         try {
           const result = await api.getClothes(user.id);
-          if (Array.isArray(result)) {
-            setClothes(result);
-          }
+          if (Array.isArray(result)) setClothes(result);
         } catch (error) {
           console.error("Failed to fetch clothes:", error);
           setMessage("服の読み込みに失敗しました。");
@@ -49,40 +51,46 @@ const DashboardPage: React.FC = () => {
       };
       fetchUserClothes();
     }
-  }, [isLoading, isAuthenticated, user, navigate]); // 認証状態とuserの変更を監視
+  }, [isLoading, isAuthenticated, user, navigate]);
 
-  
+  // 服の追加処理
   const handleAddCloth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      setMessage("ログインしていません。");
+    if (!user) return;
+
+    if (!newClothName || !newClothCategory) {
+      setMessage("服の名前とカテゴリは必須です。");
       return;
     }
-    if (!newClothName || !newClothCategory || !newClothColor) {
-      setMessage("服の名前、カテゴリ、色は必須です。");
-      return;
-    }
+
     try {
-      const result = await api.addCloth(user.id, {
+      const clothData = {
         name: newClothName,
         category: newClothCategory,
         color: newClothColor,
-      });
+      };
+      
+      const result = await api.addCloth(clothData, selectedImageFile);
+
       setMessage(result.message);
-      if (result.cloth_id) {
+      // バックエンドのレスポンスにclothオブジェクトが含まれているか確認
+      if (result.cloth) {
+        // 成功したらフォームをリセット
         setNewClothName('');
         setNewClothCategory('');
         setNewClothColor('');
-        // 服を追加したあと、リストを再取得（すでにあるuseEffectがuserの変更を検知しないため、手動で再取得）
+        setSelectedImageFile(null);
+        // 服リストを再取得して画面を更新
         const updatedClothes = await api.getClothes(user.id);
         if (Array.isArray(updatedClothes)) setClothes(updatedClothes);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to add cloth:", error);
-      setMessage("服の追加に失敗しました。");
+      setMessage(error.message || "服の追加に失敗しました。");
     }
   };
 
+  // コーデ提案処理
   const handleSuggestOutfits = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -97,21 +105,15 @@ const DashboardPage: React.FC = () => {
       setMessage("コーデの提案に失敗しました。");
     }
   };
-  
-  const handleLogout = () => {
-    logout();
-    // navigate('/login'); useAuth内のlogoutで処理されるか、useEffectで検知される
-  };
-  
-  // 認証状態の読み込み中はスピナーなどを表示
+
   if (isLoading) {
     return <div>認証状態を読み込み中...</div>;
   }
-  
+
   return (
     <div>
       <h2>ダッシュボード (ようこそ {user?.username} さん!)</h2>
-      <button onClick={handleLogout} style={{ float: 'right' }}>ログアウト</button>
+      <button onClick={logout} style={{ float: 'right' }}>ログアウト</button>
       <br/>
       <Link to="/suggest">AIとコーデを相談する</Link> 
       <br/>
@@ -119,24 +121,28 @@ const DashboardPage: React.FC = () => {
 
       <h3>服の登録</h3>
       <form onSubmit={handleAddCloth}>
-        <input type="text" placeholder="服の名前 (例: 半袖Tシャツ)" value={newClothName} onChange={(e) => setNewClothName(e.target.value)} />
-        <input type="text" placeholder="カテゴリ (例: トップス)" value={newClothCategory} onChange={(e) => setNewClothCategory(e.target.value)} />
+        <input type="text" placeholder="服の名前 (例: 半袖Tシャツ)" value={newClothName} onChange={(e) => setNewClothName(e.target.value)} required />
+        <input type="text" placeholder="カテゴリ (例: トップス)" value={newClothCategory} onChange={(e) => setNewClothCategory(e.target.value)} required />
         <input type="text" placeholder="色 (例: 黒)" value={newClothColor} onChange={(e) => setNewClothColor(e.target.value)} />
-        <button type="submit">服を追加</button>
+        
+        <div>
+          <label>画像 (任意): </label>
+          <input type="file" accept="image/*" onChange={(e) => setSelectedImageFile(e.target.files ? e.target.files[0] : null)} />
+        </div>
+
+        <button type="submit">この服を登録する</button>
       </form>
 
       <h3>あなたの服</h3>
-      {clothes.length === 0 ? (
-        <p>まだ服が登録されていません。</p>
-      ) : (
-        <ul>
-          {clothes.map((cloth) => (
-            <li key={cloth.id}>{cloth.name} ({cloth.color}, {cloth.category})</li>
-          ))}
-        </ul>
-      )}
-
-      {/* コーデ提案フォームと結果表示は変更なし */}
+      <ul>
+        {clothes.map((cloth) => (
+          <li key={cloth.id}>
+            {cloth.name} ({cloth.color}, {cloth.category})
+            {cloth.image_url && <img src={cloth.image_url} alt={cloth.name} style={{height: '50px', marginLeft: '10px'}} />}
+          </li>
+        ))}
+      </ul>
+      
       <h3>コーデ提案</h3>
       <form onSubmit={handleSuggestOutfits}>
         <label>日付: <input type="date" value={suggestedDate} onChange={(e) => setSuggestedDate(e.target.value)} required /></label><br />
