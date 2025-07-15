@@ -53,7 +53,7 @@ def create_iterative_system_prompt(weather_info: str = None) -> str:
 - `next_question`: **必須項目。** コーデを洗練させるために、次に追加で聞きたい質問を一つだけ、ここに記述します。ユーザーが「確定」と言わない限り、必ず何か質問を入れてください。
 - `suggestion_items`: **必須項目。** トップス、ボトムス、靴を必ず提案してください。ワンピース等はtopsとbottomsに同じ名前を入れてください。
 - `updated_slots`: ユーザーから得た情報をここに更新してください。新しい情報がない場合は、nullを入れてください。
-- `weather_info`: 現在の天気情報をここに入れてください。コーデの提案の際に活用してください。
+- `weather_info`: 今日の天気情報です。コーデの提案の際に活用してください。
 - `type`: ユーザーが「確定」「それがいい」など明確な同意を示した場合のみ `"final_suggestion"` としてください。それ以外は常に `"suggestion"` です。
 
 # 例
@@ -82,7 +82,7 @@ def propose_outfit():
     if not user_message:
         return jsonify({"message": "メッセージは必須です。"}), 400
     
-    weather_info = get_weather_info(('Kyoto, Japan'), 10)
+    weather_info = get_weather_info(('Kyoto, Japan'), 1)
     logger.info(f"Weather info: {weather_info}")
     messages_for_api = [
         {"role": "system", "content": create_iterative_system_prompt(weather_info=weather_info)},
