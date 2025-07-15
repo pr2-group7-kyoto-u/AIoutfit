@@ -8,6 +8,8 @@ interface Cloth {
   name: string;
   color: string;
   category: string;
+  preferred: boolean;
+  available: boolean;
 }
 
 const DashboardPage: React.FC = () => {
@@ -97,6 +99,55 @@ const DashboardPage: React.FC = () => {
       setMessage("コーデの提案に失敗しました。");
     }
   };
+
+  const handleSetPreferred = async (clothID: number, preferred: boolean) => {
+    if (!user) return;
+    try {
+      const result = await api.updateClothes(user.id, clothID, {Preferred: preferred});
+      if (result) {
+        setClothes(prevClothes =>
+          prevClothes.map(cloth =>
+            cloth.id === clothID ? { ...cloth, preferred: preferred } : cloth
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to set to preferred:", error);
+      setMessage("お気に入りに設定失敗しました。");
+    }
+  }
+
+  const handleSetAvailabile = async (clothId: number, available: boolean) => {
+    if (!user) return;
+    try {
+      const result = await api.updateClothes(user.id, clothId, {Available: available});
+      if (result) {
+        setClothes(prevClothes =>
+          prevClothes.map(cloth =>
+            cloth.id === clothId ? { ...cloth, available: available } : cloth
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to set to available:", error);
+      setMessage("利用可能に失敗しました。");
+    }
+  };
+
+  const handleDeleteCloth = async (clothID: number) => {
+    if (!user) return;
+    try {
+      const result = await api.deleteClothes(user.id, clothID);
+      if (result) {
+        setClothes(prevClothes =>
+          prevClothes.filter(cloth => cloth.id !== clothID)
+        );
+      }
+    } catch (error) {
+      console.error("Failed to delete clothes:", error);
+      setMessage("服の削除に失敗しました。");
+    }
+  };
   
   const handleLogout = () => {
     logout();
@@ -129,11 +180,30 @@ const DashboardPage: React.FC = () => {
       {clothes.length === 0 ? (
         <p>まだ服が登録されていません。</p>
       ) : (
-        <ul>
-          {clothes.map((cloth) => (
-            <li key={cloth.id}>{cloth.name} ({cloth.color}, {cloth.category})</li>
-          ))}
-        </ul>
+        <table>
+          <thead>
+            <tr>
+              <th>名前</th>
+              <th>色</th>
+              <th>カテゴリ</th>
+              <th>お気に入り</th>
+              <th>利用可能</th>
+              <th>削除</th>
+            </tr>
+          </thead>
+          <tbody>
+            {clothes.map((cloth) => (
+              <tr key={cloth.id}>
+                <td>{cloth.name}</td>
+                <td>{cloth.color}</td>
+                <td>{cloth.category}</td>
+                <td><button onClick={() => handleSetPreferred(cloth.id, !cloth.preferred)}>{cloth.preferred ? "✔️" : "✖️"}</button></td>
+                <td><button onClick={() => handleSetAvailabile(cloth.id, !cloth.available)}>{cloth.available ? "✔️" : "✖️"}</button></td>
+                <td><button onClick={() => handleDeleteCloth(cloth.id)}>削除</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
       {/* コーデ提案フォームと結果表示は変更なし */}

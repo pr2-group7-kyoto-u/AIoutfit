@@ -52,3 +52,43 @@ def get_user_clothes(user_id):
     except Exception as e:
         session.rollback()
         return jsonify({"message": f"An error occurred: {str(e)}"}), 500
+    
+@clothing_bp.route('/api/clothes/<int:user_id>/<int:clothes_id>', methods=['DELETE'])
+@jwt_required()
+def delete_user_clothes(user_id, clothes_id):
+    session = get_db_session()
+    try:
+        current_user_id = get_jwt_identity()
+        if current_user_id != str(user_id):
+            return jsonify({"message": "Forbidden: You can only delete your own clothes"}), 403
+
+        deleted = session.query(Cloth).filter(Cloth.id == clothes_id, Cloth.user_id == user_id).delete(synchronize_session=False)
+        if not deleted:
+            return jsonify({"message": "Cloth not found"}), 404
+        session.commit()
+        return jsonify({"message": "Cloth deleted successfully", "cloth_id": clothes_id}), 200
+    except Exception as e:
+        session.rollback()
+        return jsonify({"message": f"An error occurred: {str(e)}"}), 500
+    
+@clothing_bp.route('/api/clothes/<int:user_id>/<int:clothes_id>', methods=['PATCH'])
+@jwt_required()
+def update_user_clothes(user_id, clothes_id):
+    session = get_db_session()
+    try:
+        current_user_id = get_jwt_identity()
+        if current_user_id != str(user_id):
+            return jsonify({"message": "Forbidden: You can only delete your own clothes"}), 403
+
+        data = request.json
+
+        updated = session.query(Cloth).filter(Cloth.id == clothes_id, Cloth.user_id == user_id).update(data)
+        session.commit()
+        return jsonify({
+                "id": updated.id, "name": updated.name, "category": updated.category, "color": updated.color,
+                "material": updated.material, "season": updated.season, "is_formal": updated.is_formal,
+                "image_url": updated.image_url
+            }), 200
+    except Exception as e:
+        session.rollback()
+        return jsonify({"message": f"An error occurred: {str(e)}"}), 500

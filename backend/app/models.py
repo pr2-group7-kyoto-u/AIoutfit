@@ -26,6 +26,8 @@ class Cloth(Base):
     material = Column(String(255))
     season = Column(String(255)) # 例: '春,夏', '秋,冬'
     is_formal = Column(Boolean, default=False)
+    available = Column(Boolean, default=True)
+    preferred = Column(Boolean, default=False)
     image_url = Column(String(255))
     vector = Column(JSON) # JSONとしてベクトルを保存。または別途ベクトルDBへ
 

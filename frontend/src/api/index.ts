@@ -119,6 +119,29 @@ const api = {
     }
     return response.json();
   },
+
+  updateClothes: async (userId: number, clothesId: number, clothes_info: any) => {
+    const response = await fetchWithAuth(`/api/clothes/${userId}/${clothesId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(clothes_info),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
+
+  deleteClothes: async (userId: number, clothesId: number) => {
+    const response = await fetchWithAuth(`/api/clothes/${userId}/${clothesId}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
 };
 
 export default api;
