@@ -14,12 +14,14 @@ import torch
 from transformers import CLIPModel, CLIPProcessor
 from pinecone import Pinecone, ServerlessSpec
 
+# Load environment variables once at module level
+dotenv.load_dotenv()
+
 # --- グローバル設定 ---
 MODEL_NAME = "openai/clip-vit-base-patch32"
 INDEX_NAME = "test" # インデックス名をより具体的に変更
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-WEATHER_API_KEY = ""
-dotenv.load_dotenv()
+# WEATHER_API_KEYは必要に応じてos.getenvで直接取得するか、引数として渡す
 
 # --- サービス初期化 ---
 def initialize_services():
@@ -29,7 +31,7 @@ def initialize_services():
 
     # Pineconeクライアントの初期化
     pinecone_api_key = os.getenv("PINECONE_API_KEY")
-    pinecone_environment = os.getenv("PINECONE_ENVIRONMENT", "us-west1-gcp")
+    pinecone_environment = os.getenv("PINECONE_ENVIRONMENT", "us-west1-gcp") # Changed default region to match spec
     
     if not pinecone_api_key:
         raise ValueError("PINECONE_API_KEY environment variable not set")
@@ -59,8 +61,8 @@ def initialize_services():
     index = pc.Index(INDEX_NAME)
     logger.info(f"Initial index stats: {index.describe_index_stats()}")
     
-    WEATHER_API_KEY = os.getenv("WEATHER_API_KEY", WEATHER_API_KEY)
-    
+    # 問題の行を削除: WEATHER_API_KEY = os.getenv("WEATHER_API_KEY", WEATHER_API_KEY)
+
     return model, processor, index, openai_client
 
 # --- 低レベルヘルパー関数 (ベクトル化・ファイル保存) ---
@@ -131,6 +133,7 @@ def search_items_for_user(query: str, user_id: str, index: Pinecone.Index, model
 def generate_outfit_queries_with_openai(context: dict, openai_client: openai.OpenAI) -> dict | None:
     """ユーザーの状況から、OpenAIモデルを使って最適な服装のクエリを生成する。"""
     logger.info("Generating outfit queries with OpenAI...")
+    get_weather_info
     system_prompt = """
     あなたは日本のトップファッションスタイリストです。提供されたユーザーの状況を分析し、最適な服装の組み合わせを1つ提案してください。
     回答は必ず以下のJSON形式で、キーも完全に一致させてください。
@@ -259,14 +262,21 @@ def main():
 def get_weather_info(location: str, days_from_now: int) -> dict:
     city = location.split(",")[0].strip()
     country = location.split(",")[1].strip()
-    coordinate = get_lat_and_lon(city, country)
+    
+    # Fetch API key directly here
+    weather_api_key = os.getenv("WEATHER_API_KEY")
+    if not weather_api_key:
+        logger.error("WEATHER_API_KEY environment variable not set. Cannot fetch weather info.")
+        return {"temperature": None, "condition": "不明"}
+
+    coordinate = get_lat_and_lon(city, country) # Pass API key
     if not coordinate:
         logger.warning(f"Could not find coordinates for {location}.")
         return {"temperature": None, "condition": "不明"}
     lat = coordinate[0]
     lon = coordinate[1]
 
-    api = f"https://api.openweathermap.org/data/2.5/forecast/daily?lat={lat}&lon={lon}&cnt={days_from_now}&appid={WEATHER_API_KEY}"
+    api = f"https://api.openweathermap.org/data/2.5/forecast/daily?lat={lat}&lon={lon}&cnt={days_from_now}&appid={weather_api_key}"
 
     try:
         response = requests.get(api)
@@ -282,23 +292,36 @@ def get_weather_info(location: str, days_from_now: int) -> dict:
     
     return data["list"][days_from_now - 1]
 
-def get_lat_and_lon(city: str, country: str) -> tuple:
+def get_lat_and_lon(city: str, country: str) -> tuple: # weather_api_key は関数内で取得するように修正されているはず
+    # WEATHER_API_KEY を再度取得 (utils.py の initialize_services 修正でグローバル変数を参照するのではなく、直接 os.getenv で取得するように変更済み)
+    weather_api_key = os.getenv("WEATHER_API_KEY")
+    if not weather_api_key:
+        logger.error("WEATHER_API_KEY environment variable not set. Cannot get coordinates.")
+        return None
+
     country_iso = pycountry.countries.get(name=country)
     if not country_iso:
-        # try a fuzzy match
         matches = [c for c in pycountry.countries if country.lower() in c.name.lower()]
         country_iso = matches[0] if matches else None
     if not country_iso:
+        logger.warning(f"Could not find ISO code for country: {country}")
         return None
     
-    api = f"https://api.openweathermap.org/geo/1.0/direct?q={city},{country_iso.alpha_2}&limit=1&appid={WEATHER_API_KEY}"
+    api = f"https://api.openweathermap.org/geo/1.0/direct?q={city},{country_iso.alpha_2}&limit=1&appid={weather_api_key}"
+    
     try:
         response = requests.get(api)
+        response.raise_for_status() # HTTPエラーレスポンス (4xx, 5xx) の場合に例外を発生させる
     except requests.RequestException as e:
-        logger.error(f"Error fetching location data: {response.status_code} - {response.text}")
+        logger.error(f"位置情報取得中にエラーが発生しました: {city}, {country}. エラー: {e}")
         return None
     
     data = response.json()
+    
+    # data がリストであり、かつ空でないことを確認
+    if not isinstance(data, list) or not data:
+        logger.warning(f"'{city}, {country}' の座標が見つからないか、予期せぬAPI応答でした: {data}")
+        return None
     
     return (data[0].get("lat"), data[0].get("lon"))
 
