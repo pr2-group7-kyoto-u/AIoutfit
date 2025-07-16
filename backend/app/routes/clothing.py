@@ -9,9 +9,29 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.database import get_db_session
 from app.models import Cloth
 
+# Pinecone関連のユーティリティをインポート
+from app.utils import initialize_services, upload_image_to_pinecone
+from PIL import Image
+from io import BytesIO
+from loguru import logger # デバッグ用のロギングを有効にするため
+
 clothing_bp = Blueprint('clothing', __name__)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+# ブループリントが作成された際に一度Pineconeサービスを初期化する
+# より大規模なアプリケーションでは、app.pyや専用のサービスレイヤーで初期化を検討してください
+try:
+    # 画像の埋め込みとPineconeへのアップロードには、インデックス、モデル、プロセッサーのみが必要
+    # openai_clientは服の登録では直接使用されない
+    clip_model, clip_processor, pinecone_index, _ = initialize_services()
+    logger.info("clothing_bpでPineconeとCLIPサービスが初期化されました。")
+except Exception as e:
+    logger.error(f"clothing_bpでPineconeとCLIPサービスの初期化に失敗しました: {e}")
+    # サービスが失敗した場合、画像の埋め込みを無効にするなど、適切にエラーを処理してください
+    clip_model = None
+    clip_processor = None
+    pinecone_index = None
 
 def allowed_file(filename):
     """許可された拡張子のファイルかチェックする"""
@@ -23,7 +43,7 @@ def allowed_file(filename):
 def add_cloth():
     """
     服の情報を登録する。画像ファイルが添付されていれば、ユニークなファイル名を生成して
-    MinIOにアップロードし、そのURLをDBに保存する。
+    MinIOにアップロードし、そのURLをDBに保存し、Pineconeにも画像ベクトルを登録する。
     """
     session = get_db_session()
     try:
@@ -40,7 +60,8 @@ def add_cloth():
             return jsonify({"message": "服の名前とカテゴリは必須です"}), 400
 
         image_url = None
-
+        image_bytes = None
+        
         if 'image' in request.files:
             file = request.files['image']
             
@@ -65,16 +86,48 @@ def add_cloth():
                     config=Config(signature_version='s3v4')
                 )
                 
+                # ファイルの内容をメモリに読み込む
+                image_bytes = file.read()
+                file.seek(0) # upload_fileobjのためにファイルポインタを先頭に戻す
+
                 # ユニークなファイル名でMinIOにアップロード
                 s3_client.upload_fileobj(
-                    file,
+                    BytesIO(image_bytes), # BytesIOを使用してメモリからアップロード
                     s3_bucket,
-                    unique_filename, # 変更点：ユニークなファイル名を使用
+                    unique_filename,
                     ExtraArgs={'ContentType': file.content_type}
                 )
                 
                 # 公開URLもユニークなファイル名で生成
                 image_url = f"/images/{unique_filename}"
+                logger.info(f"MinIOに画像をアップロードしました: {image_url}")
+
+                # Pineconeへのアップロード処理
+                if clip_model and clip_processor and pinecone_index and image_bytes:
+                    item_metadata = {
+                        "name": name,
+                        "category": category,
+                        "color": color,
+                        "material": material if material else "unknown", # materialが空の場合は"unknown"を設定
+                        "season": season if season else "unknown", # seasonが空の場合は"unknown"を設定
+                        "is_formal": is_formal if is_formal is not None else False, # is_formalが空の場合はFalseを設定
+                        "description": f"{color}の{material}製の{name} ({category})" # CLIP検索用の説明
+                    }
+                    pinecone_upload_result = upload_image_to_pinecone(
+                        image_bytes=image_bytes,
+                        user_id=current_user_id, # user_idを文字列で渡す
+                        item_metadata=item_metadata,
+                        index=pinecone_index,
+                        model=clip_model,
+                        processor=clip_processor
+                    )
+                    if pinecone_upload_result.get("success"):
+                        logger.success(f"項目ID {pinecone_upload_result.get('item_id')} の画像ベクトルがPineconeにアップロードされました")
+                    else:
+                        logger.error(f"Pineconeへの画像ベクトルのアップロードに失敗しました: {pinecone_upload_result.get('error')}")
+                else:
+                    logger.warning("Pineconeサービスが完全に初期化されていないか、画像データがありません。Pineconeへのアップロードをスキップします。")
+        
         # Clothオブジェクトを作成
         new_cloth = Cloth(
             user_id=int(current_user_id),
@@ -85,6 +138,8 @@ def add_cloth():
             season=season,
             is_formal=is_formal,
             image_url=image_url
+            # vectorフィールドはmodels.pyにあるが、Pineconeを使用するためDBには保存しない（またはPineconeのIDを保存する）
+            # ここではvectorを直接DBに保存しないことを想定
         )
 
         session.add(new_cloth)
@@ -102,14 +157,13 @@ def add_cloth():
 
     except Exception as e:
         session.rollback()
-        print(f"Error in add_cloth: {e}")
+        logger.error(f"add_clothでエラーが発生しました: {e}")
         return jsonify({"message": f"エラーが発生しました: {e}"}), 500
 
 
 @clothing_bp.route('/api/clothes/<int:user_id>', methods=['GET'])
 @jwt_required()
 def get_user_clothes(user_id):
-    # この関数は変更ありません
     session = get_db_session()
     try:
         current_user_id = get_jwt_identity()
@@ -126,4 +180,5 @@ def get_user_clothes(user_id):
         ]), 200
     except Exception as e:
         session.rollback()
-        return jsonify({"message": f"An error occurred: {str(e)}"}), 500
+        logger.error(f"get_user_clothesでエラーが発生しました: {str(e)}")
+        return jsonify({"message": f"エラーが発生しました: {str(e)}"}), 500
