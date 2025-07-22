@@ -9,7 +9,7 @@ const HomePage: React.FC = () => (
     <ul>
       <li><Link to="/uploadclothing">服を登録</Link></li>
       <li><Link to="/checkclothing">服を確認</Link></li>
-      <li><Link to="/chatbot">服の提案を受ける</Link></li>
+      <li><Link to="/suggestion">服の提案を受ける</Link></li>
       <li><Link to="/history">履歴</Link></li>
       <li><Link to="/settings">設定</Link></li>
     </ul>

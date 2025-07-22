@@ -5,7 +5,7 @@ import styles from './normal.module.css';
 //仮設定
 const CheckPage: React.FC = () => (
   <div className={styles.normalBackground}>
-    <h1>服確認</h1>
+    <h1>服の確認</h1>
     <p>登録した服を確認できます。</p>
     <ul>
       <li><Link to="/">戻る</Link></li>
