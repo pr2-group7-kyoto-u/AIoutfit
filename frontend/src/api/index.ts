@@ -40,11 +40,11 @@ export interface HistoryMessage {
 }
 
 const api = {
-  register: (username: string, password: string) =>
+  register: (username: string, password: string, age?: string, gender?: string) =>
     fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, age, gender }),
     }).then(res => res.json()),
 
   login: (username: string, password: string) =>
