@@ -84,6 +84,32 @@ const api = {
     return response.json();
   },
 
+  getPastSuggestions: async () => {
+    const response = await fetchWithAuth('/api/suggestions');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
+
+  saveSuggestion: async (suggestionData: {
+    suggested_date: string;
+    top_id: number;
+    bottom_id: number;
+    shoes_id?: number;
+  }) => {
+    const response = await fetchWithAuth('/api/suggestions', {
+      method: 'POST',
+      body: JSON.stringify(suggestionData),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
+
   suggestOutfits: async (userId: number, date: string, occasion: string, location: string) => {
     const response = await fetchWithAuth('/api/suggest_outfits', {
       method: 'POST',
