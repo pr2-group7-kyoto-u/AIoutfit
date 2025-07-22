@@ -208,15 +208,18 @@ def update_user_clothes(user_id, clothes_id):
     try:
         current_user_id = get_jwt_identity()
         if current_user_id != str(user_id):
-            return jsonify({"message": "Forbidden: You can only delete your own clothes"}), 403
+            return jsonify({"message": "Forbidden: You can only update your own clothes"}), 403
 
         data = request.json
 
-        updated = session.query(Cloth).filter(Cloth.id == clothes_id, Cloth.user_id == user_id).update(data)
+        session.query(Cloth).filter(Cloth.id == clothes_id, Cloth.user_id == user_id).update(data)
         session.commit()
+
+        updated = session.query(Cloth).filter_by(id=clothes_id, user_id=user_id).first()
         return jsonify({
                 "id": updated.id, "name": updated.name, "category": updated.category, "color": updated.color,
                 "material": updated.material, "season": updated.season, "is_formal": updated.is_formal,
+                "preferred": updated.preferred, "available": updated.available,
                 "image_url": updated.image_url
             }), 200
     except Exception as e:

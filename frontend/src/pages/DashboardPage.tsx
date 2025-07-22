@@ -111,7 +111,7 @@ const DashboardPage: React.FC = () => {
   const handleSetPreferred = async (clothID: number, preferred: boolean) => {
     if (!user) return;
     try {
-      const result = await api.updateClothes(user.id, clothID, {Preferred: preferred});
+      const result = await api.updateClothes(user.id, clothID, { "preferred": preferred });
       if (result) {
         setClothes(prevClothes =>
           prevClothes.map(cloth =>
@@ -128,7 +128,8 @@ const DashboardPage: React.FC = () => {
   const handleSetAvailabile = async (clothId: number, available: boolean) => {
     if (!user) return;
     try {
-      const result = await api.updateClothes(user.id, clothId, {Available: available});
+      const updateData = { available: available };
+      const result = await api.updateClothes(user.id, clothId, updateData);
       if (result) {
         setClothes(prevClothes =>
           prevClothes.map(cloth =>
