@@ -203,6 +203,7 @@ const DashboardPage: React.FC = () => {
               <th>名前</th>
               <th>色</th>
               <th>カテゴリ</th>
+              <th>イメージ</th>
               <th>お気に入り</th>
               <th>利用可能</th>
               <th>削除</th>
@@ -214,6 +215,7 @@ const DashboardPage: React.FC = () => {
                 <td>{cloth.name}</td>
                 <td>{cloth.color}</td>
                 <td>{cloth.category}</td>
+                <td><img src={cloth.image_url} alt={cloth.name} style={{height: '50px'}} /></td>
                 <td><button onClick={() => handleSetPreferred(cloth.id, !cloth.preferred)}>{cloth.preferred ? "✔️" : "✖️"}</button></td>
                 <td><button onClick={() => handleSetAvailabile(cloth.id, !cloth.available)}>{cloth.available ? "✔️" : "✖️"}</button></td>
                 <td><button onClick={() => handleDeleteCloth(cloth.id)}>削除</button></td>
@@ -223,7 +225,7 @@ const DashboardPage: React.FC = () => {
         </table>
       )}
 
-      {/* コーデ提案フォームと結果表示は変更なし */}
+      {/* コーデ提案フォームと結果表示は変更なし
       <ul>
         {clothes.map((cloth) => (
           <li key={cloth.id}>
@@ -231,7 +233,7 @@ const DashboardPage: React.FC = () => {
             {cloth.image_url && <img src={cloth.image_url} alt={cloth.name} style={{height: '50px', marginLeft: '10px'}} />}
           </li>
         ))}
-      </ul>
+      </ul> */}
       
       <h3>コーデ提案</h3>
       <form onSubmit={handleSuggestOutfits}>
