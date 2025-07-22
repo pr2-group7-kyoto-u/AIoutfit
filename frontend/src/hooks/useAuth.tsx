@@ -5,6 +5,8 @@ import api from '../api';
 interface User {
   id: number;
   username: string;
+  age?: string;
+  gender?: string;
 }
 
 // 認証コンテキストの型定義
@@ -12,7 +14,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<{ success: boolean; message: string }>;
-  register: (username: string, password: string) => Promise<{ success: boolean; message: string }>;
+  register: (username: string, password: string, age?: string, gender?: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -35,8 +37,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = () => {
       const storedUserId = localStorage.getItem('user_id');
       const storedUsername = localStorage.getItem('username');
+      const storedAge = localStorage.getItem('age');
+      const storedGender = localStorage.getItem('gender');
       if (storedUserId && storedUsername) {
-        setUser({ id: parseInt(storedUserId), username: storedUsername });
+        setUser({ id: parseInt(storedUserId), username: storedUsername, age: storedAge || undefined, gender: storedGender || undefined });
         setIsAuthenticated(true);
       }
       setIsLoading(false);
@@ -50,12 +54,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const result = await api.login(username, password);
       if (result.user_id) {
-        const newUser: User = { id: result.user_id, username: username };
+        const newUser: User = { id: result.user_id, username: username, age: result.age, gender: result.gender };
         setUser(newUser);
         setIsAuthenticated(true);
         localStorage.setItem('access_token', result.access_token);
         localStorage.setItem('user_id', result.user_id.toString());
         localStorage.setItem('username', username);
+        localStorage.setItem('age', result.age || '');
+        localStorage.setItem('gender', result.gender || '');
         return { success: true, message: result.message };
       } else {
         setUser(null);
@@ -72,19 +78,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const register = useCallback(async (username: string, password: string) => {
+  const register = useCallback(async (username: string, password: string, age?: string, gender?: string) => {
     setIsLoading(true);
     try {
-      const result = await api.register(username, password);
+      const result = await api.register(username, password, age, gender);
       // 登録成功時
       if (result.access_token) {
-        const newUser: User = { id: result.user_id, username: result.username };
+        const newUser: User = { id: result.user_id, username: result.username, age: result.age, gender: result.gender };
         // ReactのstateとlocalStorageの両方を更新
         setUser(newUser);
         setIsAuthenticated(true);
         localStorage.setItem('access_token', result.access_token);
         localStorage.setItem('user_id', result.user_id.toString());
         localStorage.setItem('username', result.username);
+        localStorage.setItem('age', result.age || '');
+        localStorage.setItem('gender', result.gender || '');
         return { success: true, message: result.message };
       } else {
         // 登録失敗時

@@ -1,9 +1,14 @@
 // 認証付きのfetchリクエストを生成するヘルパー関数
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   const headers = new Headers(options.headers);
-  headers.set('Content-Type', 'application/json');
+
+  // bodyがFormDataのインスタンスでない場合のみ、Content-Typeをセットする
+  if (!(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
 
   const token = localStorage.getItem('access_token');
+
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
@@ -35,11 +40,11 @@ export interface HistoryMessage {
 }
 
 const api = {
-  register: (username: string, password: string) =>
+  register: (username: string, password: string, age?: string, gender?: string) =>
     fetch('/api/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ username, password, age, gender }),
     }).then(res => res.json()),
 
   login: (username: string, password: string) =>
@@ -48,7 +53,6 @@ const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     }).then(res => res.json()),
-
 
   getClothes: async (userId: number) => {
     const response = await fetchWithAuth(`/api/clothes/${userId}`);
@@ -59,10 +63,19 @@ const api = {
     return response.json();
   },
 
-  addCloth: async (userId: number, clothData: any) => {
+  addCloth: async (clothData: { [key: string]: any }, imageFile: File | null) => {
+    const formData = new FormData();
+    Object.keys(clothData).forEach(key => {
+      if (clothData[key] != null) {
+        formData.append(key, String(clothData[key]));
+      }
+    });
+    if (imageFile) {
+      formData.append('image', imageFile);
+    }
     const response = await fetchWithAuth('/api/clothes', {
       method: 'POST',
-      body: JSON.stringify({ user_id: userId, ...clothData }),
+      body: formData,
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));

@@ -1,4 +1,5 @@
 .env
+.amazonq/rules/
 node_modules/
 build/
 backend/__pycache__/

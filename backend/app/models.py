@@ -9,8 +9,12 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
+    age = Column(String(10))
+    gender = Column(String(10))
     preferred_style = Column(String(255))
     created_at = Column(DateTime, default=func.now())
+    age = Column(Integer, nullable=True)
+    gender = Column(String(50), nullable=True)
 
     clothes = relationship("Cloth", back_populates="user")
     suggestions = relationship("OutfitSuggestion", back_populates="user")
