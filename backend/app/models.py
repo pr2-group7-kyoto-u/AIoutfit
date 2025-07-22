@@ -13,6 +13,8 @@ class User(Base):
     gender = Column(String(10))
     preferred_style = Column(String(255))
     created_at = Column(DateTime, default=func.now())
+    age = Column(Integer, nullable=True)
+    gender = Column(String(50), nullable=True)
 
     clothes = relationship("Cloth", back_populates="user")
     suggestions = relationship("OutfitSuggestion", back_populates="user")

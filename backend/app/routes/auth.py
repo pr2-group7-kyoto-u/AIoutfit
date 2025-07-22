@@ -15,13 +15,15 @@ def register():
         data = request.json
         username = data.get('username')
         password = data.get('password')
+        age = data.get('age')
+        gender = data.get('gender')
         if not username or not password:
             return jsonify({"message": "Username and password are required"}), 400
         if session.query(User).filter_by(username=username).first():
             return jsonify({"message": "Username already exists"}), 409
 
         hashed_password = generate_password_hash(password)
-        new_user = User(username=username, password_hash=hashed_password)
+        new_user = User(username=username, password_hash=hashed_password, age=age, gender=gender)
         session.add(new_user)
         session.commit()
 
@@ -31,6 +33,8 @@ def register():
             "message": "User registered successfully",
             "user_id": new_user.id,
             "username": new_user.username,
+            "age": new_user.age,
+            "gender": new_user.gender,
             "access_token": access_token
         }), 201
     except Exception as e:
@@ -56,6 +60,8 @@ def login():
                 "message": "Login successful",
                 "user_id": user.id,
                 "username": user.username,
+                "age": user.age,
+                "gender": user.gender,
                 "access_token": access_token
             }), 200
         else:

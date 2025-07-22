@@ -113,6 +113,9 @@ const DashboardPage: React.FC = () => {
   return (
     <div>
       <h2>ダッシュボード (ようこそ {user?.username} さん!)</h2>
+      <div style={{ marginBottom: '20px' }}>
+        <p>ユーザー情報: {user?.age && `${user.age}歳`} {user?.gender && `・ ${user.gender}`}</p>
+      </div>
       <button onClick={logout} style={{ float: 'right' }}>ログアウト</button>
       <br/>
       <Link to="/suggest">AIとコーデを相談する</Link> 
