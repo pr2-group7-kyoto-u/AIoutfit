@@ -10,7 +10,7 @@ from app.database import get_db_session
 from app.models import Cloth
 
 # Pinecone関連のユーティリティをインポート
-from app.utils import initialize_services, upload_image_to_pinecone
+from app.utils import initialize_services, upload_image_to_pinecone, search_items_for_user
 from PIL import Image
 from io import BytesIO
 from loguru import logger # デバッグ用のロギングを有効にするため
@@ -119,7 +119,8 @@ def add_cloth():
                         item_metadata=item_metadata,
                         index=pinecone_index,
                         model=clip_model,
-                        processor=clip_processor
+                        processor=clip_processor,
+                        image_url=image_url
                     )
                     if pinecone_upload_result.get("success"):
                         logger.success(f"項目ID {pinecone_upload_result.get('item_id')} の画像ベクトルがPineconeにアップロードされました")
@@ -182,3 +183,36 @@ def get_user_clothes(user_id):
         session.rollback()
         logger.error(f"get_user_clothesでエラーが発生しました: {str(e)}")
         return jsonify({"message": f"エラーが発生しました: {str(e)}"}), 500
+    
+    
+@clothing_bp.route('/api/search/outfit', methods=['POST'])
+@jwt_required()
+def search_outfit():
+    data = request.get_json()
+    current_user_id = get_jwt_identity()
+
+    # Pinecone & CLIP を準備
+    model, processor, index, _ = initialize_services()
+
+    results = {}
+    for key in ['tops', 'bottoms', 'shoes']:
+        query = data.get(key)
+        if query:
+            matches = search_items_for_user(           # utils.py に実装済み
+                query=query,
+                user_id=current_user_id,
+                index=index,
+                model=model,
+                processor=processor,
+                top_k=3
+            )       
+            logger.info(f"検索結果 ({key}): {matches}")
+            # 必要情報だけフロントへ
+            results[key] = [
+                {
+                    'image_url': m['metadata'].get('image_url'),
+                    'score': m['score'],
+                    'metadata': m['metadata']
+                } for m in matches
+            ]
+    return jsonify(results), 200

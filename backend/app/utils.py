@@ -102,23 +102,21 @@ def save_image_locally(image_bytes: bytes, user_id: str, item_id: str) -> str | 
         return None
 
 # --- 中レベルコア関数 (DB操作) ---
-def upload_image_to_pinecone(image_bytes: bytes, user_id: str, item_metadata: dict, index: Pinecone.Index, model: CLIPModel, processor: CLIPProcessor) -> dict:
+def upload_image_to_pinecone(image_bytes: bytes, user_id: str, item_metadata: dict, index: Pinecone.Index, model: CLIPModel, processor: CLIPProcessor, image_url: str) -> dict:
     """画像をローカルに保存し、そのURLとベクトルをPineconeに登録する。"""
     logger.info(f"Starting image upload for user '{user_id}' with metadata: {item_metadata.get('description')}")
     try:
         item_id = str(uuid.uuid4())
-        image_url_path = save_image_locally(image_bytes, user_id, item_id)
-        if not image_url_path: return {"success": False, "error": "Failed to save image locally."}
         
         image = Image.open(BytesIO(image_bytes))
         image_vector = embed_image(image, model, processor)
         if not image_vector: return {"success": False, "error": "Failed to vectorize image."}
 
-        final_metadata = {"user_id": user_id, "image_url": image_url_path, **item_metadata}
+        final_metadata = {"user_id": user_id, "image_url": image_url, **item_metadata}
         vector_to_upsert = {"id": item_id, "values": image_vector, "metadata": final_metadata}
         
         index.upsert(vectors=[vector_to_upsert], namespace=user_id)
-        return {"success": True, "item_id": item_id, "user_id": user_id, "image_url": image_url_path}
+        return {"success": True, "item_id": item_id, "user_id": user_id, "image_url": image_url}
     except Exception as e:
         logger.error(f"An unexpected error occurred during upload process: {e}")
         return {"success": False, "error": str(e)}
@@ -126,6 +124,7 @@ def upload_image_to_pinecone(image_bytes: bytes, user_id: str, item_metadata: di
 def search_items_for_user(query: str, user_id: str, index: Pinecone.Index, model: CLIPModel, processor: CLIPProcessor, top_k: int) -> list:
     """指定したユーザーのアイテムの中から、テキストクエリで検索する。"""
     query_vector = embed_text(query, model, processor)
+    logger.info(f"Searching for items for user '{user_id}' with query: '{query}'")
     result = index.query(vector=query_vector, top_k=top_k, include_metadata=True, namespace=user_id)
     return result.get('matches', [])
 

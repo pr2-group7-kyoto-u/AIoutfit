@@ -7,6 +7,7 @@ import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import SuggestionPage from './pages/SuggestionPage'; 
+import ResultPage from './pages/ResultPage';
 
 import { AuthProvider } from './hooks/useAuth';
 
@@ -21,6 +22,7 @@ const App: React.FC = () => {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/suggest" element={<SuggestionPage />} /> 
+            <Route path="/result" element={<ResultPage />} /> 
           </Routes>
         </div>
       </Router>
