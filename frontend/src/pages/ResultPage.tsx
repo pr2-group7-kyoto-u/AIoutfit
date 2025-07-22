@@ -56,8 +56,9 @@ const ResultPage: React.FC = () => {
     const run = async () => {
       try {
         const { data } = await fetchOutfitImages(suggestion);
-        console
-        setImages(data);
+        console.log("取得した画像データ:", data);
+        
+        setImages(data.image_url);
       } catch (err) {
         console.error("画像検索に失敗しました", err);
       } finally {
