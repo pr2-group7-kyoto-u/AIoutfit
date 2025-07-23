@@ -22,13 +22,10 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 # ブループリントが作成された際に一度Pineconeサービスを初期化する
 # より大規模なアプリケーションでは、app.pyや専用のサービスレイヤーで初期化を検討してください
 try:
-    # 画像の埋め込みとPineconeへのアップロードには、インデックス、モデル、プロセッサーのみが必要
-    # openai_clientは服の登録では直接使用されない
     clip_model, clip_processor, pinecone_index, _ = initialize_services()
     logger.info("clothing_bpでPineconeとCLIPサービスが初期化されました。")
 except Exception as e:
     logger.error(f"clothing_bpでPineconeとCLIPサービスの初期化に失敗しました: {e}")
-    # サービスが失敗した場合、画像の埋め込みを無効にするなど、適切にエラーを処理してください
     clip_model = None
     clip_processor = None
     pinecone_index = None
@@ -99,7 +96,7 @@ def add_cloth():
                 )
                 
                 # 公開URLもユニークなファイル名で生成
-                image_url = f"/images/{unique_filename}"
+                image_url = f"{unique_filename}"
                 logger.info(f"MinIOに画像をアップロードしました: {image_url}")
 
                 # Pineconeへのアップロード処理
@@ -191,21 +188,19 @@ def search_outfit():
     data = request.get_json()
     current_user_id = get_jwt_identity()
 
-    # Pinecone & CLIP を準備
-    model, processor, index, _ = initialize_services()
-
     results = {}
     for key in ['tops', 'bottoms', 'shoes']:
         query = data.get(key)
         if query:
-            matches = search_items_for_user(           # utils.py に実装済み
+            matches = search_items_for_user(
                 query=query,
                 user_id=current_user_id,
-                index=index,
-                model=model,
-                processor=processor,
+                # 修正後: モジュールレベルの変数を利用
+                index=pinecone_index,
+                model=clip_model,
+                processor=clip_processor,
                 top_k=3
-            )       
+            )
             logger.info(f"検索結果 ({key}): {matches}")
             # 必要情報だけフロントへ
             results[key] = [

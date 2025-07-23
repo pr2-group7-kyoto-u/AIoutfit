@@ -35,7 +35,7 @@ const ResultPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [images, setImages] = useState<SearchResponse | null>(null);
+  const [images, setResults] = useState<SearchResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   /** SuggestionPage から受け取った確定コーデ。直接アクセスの場合は undefined */
@@ -55,10 +55,9 @@ const ResultPage: React.FC = () => {
 
     const run = async () => {
       try {
-        const { data } = await fetchOutfitImages(suggestion);
+        const data = await fetchOutfitImages(suggestion);
         console.log("取得した画像データ:", data);
-        
-        setImages(data.image_url);
+        setResults(data);
       } catch (err) {
         console.error("画像検索に失敗しました", err);
       } finally {
@@ -82,8 +81,17 @@ const ResultPage: React.FC = () => {
    */
   const toFullUrl = (path?: string) => {
     if (!path) return "";
-    if (path.startsWith("http")) return path;
-    return `${process.env.REACT_APP_MINIO_PUBLIC_URL || ""}${path}`;
+    if (path.startsWith("http")) {
+      // すでに完全なURLの場合は、不要な/browser/を削除する
+      return path.replace('/browser/', '/');
+    }
+    
+    const baseUrl = process.env.REACT_APP_MINIO_PUBLIC_URL || "";
+    // pathから先頭のスラッシュと、万が一含まれている/browser/を削除
+    const cleanedPath = (path.startsWith('/') ? path.substring(1) : path).replace('browser/', '');
+
+    // baseUrlの末尾のスラッシュと、cleanedPathの先頭のスラッシュが重複しないように結合
+    return `${baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl}/${cleanedPath}`;
   };
 
   if (!suggestion) return null; // 取得中は何も表示しない
@@ -112,38 +120,54 @@ const ResultPage: React.FC = () => {
       {isLoading && <p>画像を検索中...</p>}
 
       {!isLoading && images && (
-        <div
-          style={{
-            display: "grid",
-            gap: 20,
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          }}
-        >
-          {categories.map((c) => {
-            const matches = images[c as keyof SearchResponse];
-            if (!matches || matches.length === 0) return null;
-            const best = matches[0]; // top-1 を表示 (複数表示したい場合は map)
-            return (
-              <div key={c}>
-                <img
-                  src={toFullUrl(best.image_url)}
-                  alt={best.metadata?.description || c}
-                  style={{
-                    width: "100%",
-                    aspectRatio: "3/4",
-                    objectFit: "cover",
-                    borderRadius: 8,
-                  }}
-                />
-                {best.metadata?.description && (
-                  <p style={{ marginTop: 8, fontSize: 14 }}>
-                    {best.metadata.description}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <>
+          <div
+            style={{
+              display: "grid",
+              gap: 20,
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            }}
+          >
+            {categories.map((c) => {
+              const matches = images[c as keyof SearchResponse];
+              if (!matches || matches.length === 0) return null;
+              const best = matches[0];
+              return (
+                <div key={c}>
+                  <img
+                    src={toFullUrl(best.image_url)}
+                    alt={best.metadata?.description || c}
+                    style={{
+                      width: "100%",
+                      aspectRatio: "3/4",
+                      objectFit: "cover",
+                      borderRadius: 8,
+                    }}
+                  />
+                  {best.metadata?.description && (
+                    <p style={{ marginTop: 8, fontSize: 14 }}>
+                      {best.metadata.description}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* --- ここでJSON全体を表示 --- */}
+          <pre
+            style={{
+              marginTop: 32,
+              background: "#f5f5f5",
+              padding: 16,
+              borderRadius: 8,
+              fontSize: 13,
+              overflowX: "auto",
+            }}
+          >
+            {JSON.stringify(images, null, 2)}
+          </pre>
+        </>
       )}
 
       <button

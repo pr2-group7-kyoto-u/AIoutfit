@@ -149,6 +149,7 @@ const api = {
       const err = await response.json().catch(() => ({ message: 'サーバーエラー' }));
       throw new Error(err.message);
     }
+    console.log("fetchOutfitImages response:", response);
     return response.json();   // ← ResultPage で受け取る { tops: [..], bottoms: [..], shoes: [..] }
   },
 };
