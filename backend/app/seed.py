@@ -105,6 +105,53 @@ def seed_data():
 
         print("Database seeding completed successfully.")
 
+        # --- コーデ提案の追加 ---
+        print("\nSeeding Outfit Suggestions...")
+
+        # user1 の今日のコーデ提案
+        # 提案がまだ存在しない場合のみ追加
+        today = datetime.date.today()
+        if not session.query(OutfitSuggestion).filter_by(user_id=user1.id, suggested_date=today).first():
+            # 提案に使う服のオブジェクトを取得
+            top1 = session.query(Cloth).filter_by(user_id=user1.id, name="白い半袖Tシャツ").first()
+            bottom1 = session.query(Cloth).filter_by(user_id=user1.id, name="ブルージーンズ").first()
+            shoes1 = session.query(Cloth).filter_by(user_id=user1.id, name="白いスニーカー").first()
+
+            if top1 and bottom1 and shoes1:
+                suggestion1 = OutfitSuggestion(
+                    user_id=user1.id,
+                    suggested_date=today,
+                    top_id=top1.id,
+                    bottom_id=bottom1.id,
+                    shoes_id=shoes1.id
+                )
+                session.add(suggestion1)
+                print(f"Added today's outfit suggestion for {user1.username}.")
+        else:
+            print(f"Today's outfit suggestion for {user1.username} already exists. Skipping.")
+
+        # user2 の明日のコーデ提案
+        tomorrow = today + datetime.timedelta(days=1)
+        if not session.query(OutfitSuggestion).filter_by(user_id=user2.id, suggested_date=tomorrow).first():
+            top2 = session.query(Cloth).filter_by(user_id=user2.id, name="白いブラウス").first()
+            bottom2 = session.query(Cloth).filter_by(user_id=user2.id, name="グレーのスラックス").first()
+            shoes2 = session.query(Cloth).filter_by(user_id=user2.id, name="黒のパンプス").first()
+
+            if top2 and bottom2 and shoes2:
+                suggestion2 = OutfitSuggestion(
+                    user_id=user2.id,
+                    suggested_date=tomorrow,
+                    top_id=top2.id,
+                    bottom_id=bottom2.id,
+                    shoes_id=shoes2.id
+                )
+                session.add(suggestion2)
+                print(f"Added tomorrow's outfit suggestion for {user2.username}.")
+        else:
+            print(f"Tomorrow's outfit suggestion for {user2.username} already exists. Skipping.")
+
+        session.commit()
+
     except Exception as e:
         session.rollback()
         # テーブルが存在しないエラーの場合は、より分かりやすいメッセージを出す

@@ -1,8 +1,8 @@
-"""Initial migration
+"""Initial migration from final models
 
-Revision ID: 5e742175dbbf
+Revision ID: db3f275b21d5
 Revises: 
-Create Date: 2025-06-18 17:42:57.724215
+Create Date: 2025-07-22 07:12:57.106581
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '5e742175dbbf'
+revision = 'db3f275b21d5'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -22,10 +22,10 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('username', sa.String(length=255), nullable=False),
     sa.Column('password_hash', sa.String(length=255), nullable=False),
-    sa.Column('age', sa.String(length=10), nullable=True),
-    sa.Column('gender', sa.String(length=10), nullable=True),
     sa.Column('preferred_style', sa.String(length=255), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('age', sa.Integer(), nullable=True),
+    sa.Column('gender', sa.String(length=50), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('username')
     )
@@ -38,6 +38,8 @@ def upgrade():
     sa.Column('material', sa.String(length=255), nullable=True),
     sa.Column('season', sa.String(length=255), nullable=True),
     sa.Column('is_formal', sa.Boolean(), nullable=True),
+    sa.Column('available', sa.Boolean(), nullable=True),
+    sa.Column('preferred', sa.Boolean(), nullable=True),
     sa.Column('image_url', sa.String(length=255), nullable=True),
     sa.Column('vector', sa.JSON(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
@@ -60,13 +62,9 @@ def upgrade():
     sa.Column('suggested_date', sa.Date(), nullable=False),
     sa.Column('top_id', sa.Integer(), nullable=True),
     sa.Column('bottom_id', sa.Integer(), nullable=True),
-    sa.Column('outer_id', sa.Integer(), nullable=True),
-    sa.Column('weather_info', sa.String(length=255), nullable=True),
-    sa.Column('occasion_info', sa.String(length=255), nullable=True),
-    sa.Column('suggested_at', sa.DateTime(), nullable=True),
-    sa.Column('feedback_rating', sa.Integer(), nullable=True),
+    sa.Column('shoes_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['bottom_id'], ['clothes.id'], ),
-    sa.ForeignKeyConstraint(['outer_id'], ['clothes.id'], ),
+    sa.ForeignKeyConstraint(['shoes_id'], ['clothes.id'], ),
     sa.ForeignKeyConstraint(['top_id'], ['clothes.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')

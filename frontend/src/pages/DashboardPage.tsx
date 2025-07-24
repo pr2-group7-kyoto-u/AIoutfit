@@ -40,19 +40,25 @@ const DashboardPage: React.FC = () => {
       return;
     }
     if (user) {
-      const fetchUserClothes = async () => {
+      const fetchInitialData = async () => {
         try {
-          const result = await api.getClothes(user.id);
-          if (Array.isArray(result)) setClothes(result);
+          // 服と過去の提案を両方取得する
+          const clothesResult = await api.getClothes(user.id);
+          if (Array.isArray(clothesResult)) setClothes(clothesResult);
+
+          // 過去の提案履歴を取得するAPIを呼び出す
+          const pastResult = await api.getPastSuggestions();
+          if (Array.isArray(pastResult)) setOutfitSuggestions(pastResult);
+
         } catch (error) {
-          console.error("Failed to fetch clothes:", error);
-          setMessage("服の読み込みに失敗しました。");
+          console.error("Failed to fetch initial data:", error);
+          setMessage("データの読み込みに失敗しました。");
         }
       };
-      fetchUserClothes();
+      fetchInitialData();
     }
   }, [isLoading, isAuthenticated, user, navigate]);
-
+  
   // 服の追加処理
   const handleAddCloth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +103,8 @@ const DashboardPage: React.FC = () => {
     try {
       const result = await api.suggestOutfits(user.id, suggestedDate, occasion, location);
       if (result.suggestions) {
-        setOutfitSuggestions(result.suggestions);
+        // 新しい提案を、既存の履歴リストの「先頭」に追加して画面を更新
+        setOutfitSuggestions(prevSuggestions => [...result.suggestions, ...prevSuggestions]);
       }
       setMessage(result.message || "コーデを提案しました。");
     } catch (error: any) {
@@ -177,18 +184,22 @@ const DashboardPage: React.FC = () => {
       {message && <p>{message}</p>}
       
       <h3>提案されたコーデ</h3>
-      {outfitSuggestions.length > 0 && (
+      {outfitSuggestions.length > 0 ? (
         <div>
           {outfitSuggestions.map((suggestion: any, index: number) => (
-            <div key={index} style={{ border: '1px solid #ccc', margin: '10px', padding: '10px' }}>
-              <h4>コーデ {index + 1}</h4>
+            <div key={suggestion.suggestion_id || index} style={{ border: '1px solid #ccc', margin: '10px', padding: '10px' }}>
+              <h4>{suggestion.suggested_date ? `${suggestion.suggested_date}の提案` : `新しいコーデ ${index + 1}`}</h4>
+              {suggestion.occasion_info && <p>シーン: {suggestion.occasion_info} ({suggestion.weather_info})</p>}
               <p>トップス: {suggestion.top?.name} ({suggestion.top?.color})</p>
               <p>ボトムス: {suggestion.bottom?.name} ({suggestion.bottom?.color})</p>
               {suggestion.outer && <p>アウター: {suggestion.outer?.name} ({suggestion.outer?.color})</p>}
-              <p>理由: {suggestion.reason}</p>
+              {suggestion.shoes && <p>シューズ: {suggestion.shoes?.name} ({suggestion.shoes?.color})</p>}
+              {suggestion.reason && <p>理由: {suggestion.reason}</p>}
             </div>
           ))}
         </div>
+      ) : (
+        <p>過去の提案履歴はありません。フォームから新しいコーデを提案できます。</p>
       )}
     </div>
   );
