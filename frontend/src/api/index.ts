@@ -39,6 +39,13 @@ export interface HistoryMessage {
   content: string;
 }
 
+export interface SuggestionItems {
+  tops: string;
+  bottoms: string;
+  shoes: string;
+  outerwear?: string | null;
+}
+
 const api = {
   register: (username: string, password: string, age?: string, gender?: string) =>
     fetch('/api/register', {
@@ -158,6 +165,20 @@ const api = {
     }
     return response.json();
   },
+
+  fetchOutfitImages: async (payload: SuggestionItems) => {
+    const response = await fetchWithAuth('/api/search/outfit', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(err.message);
+    }
+    console.log("fetchOutfitImages response:", response);
+    return response.json();   // ← ResultPage で受け取る { tops: [..], bottoms: [..], shoes: [..] }
+  },
 };
 
 export default api;
+export const { fetchOutfitImages } = api;
