@@ -100,7 +100,7 @@ const DashboardPage: React.FC = () => {
         setOutfitSuggestions(result.suggestions);
       }
       setMessage(result.message || "コーデを提案しました。");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to suggest outfits:", error);
       setMessage("コーデの提案に失敗しました。");
     }
@@ -125,8 +125,29 @@ const DashboardPage: React.FC = () => {
       <h3>服の登録</h3>
       <form onSubmit={handleAddCloth}>
         <input type="text" placeholder="服の名前 (例: 半袖Tシャツ)" value={newClothName} onChange={(e) => setNewClothName(e.target.value)} required />
-        <input type="text" placeholder="カテゴリ (例: トップス)" value={newClothCategory} onChange={(e) => setNewClothCategory(e.target.value)} required />
-        <input type="text" placeholder="色 (例: 黒)" value={newClothColor} onChange={(e) => setNewClothColor(e.target.value)} />
+        
+        <select value={newClothCategory} onChange={(e) => setNewClothCategory(e.target.value)} required>
+          <option value="" disabled>カテゴリを選択</option>
+          <option value="tops">トップス</option>
+          <option value="bottoms">ボトムス</option>
+          <option value="shoes">シューズ</option>
+        </select>
+
+        {/* ▼▼▼ ここを変更 ▼▼▼ */}
+        <select value={newClothColor} onChange={(e) => setNewClothColor(e.target.value)}>
+          <option value="" disabled>色を選択 (任意)</option>
+          <option value="黒">黒</option>
+          <option value="白">白</option>
+          <option value="グレー">グレー</option>
+          <option value="ネイビー">ネイビー</option>
+          <option value="ベージュ">ベージュ</option>
+          <option value="ブラウン">ブラウン</option>
+          <option value="グリーン">グリーン</option>
+          <option value="青">青</option>
+          <option value="赤">赤</option>
+          <option value="その他">その他</option>
+        </select>
+        {/* ▲▲▲ ここまで変更 ▲▲▲ */}
         
         <div>
           <label>画像 (任意): </label>

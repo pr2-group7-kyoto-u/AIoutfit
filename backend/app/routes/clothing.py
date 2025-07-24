@@ -199,7 +199,8 @@ def search_outfit():
                 index=pinecone_index,
                 model=clip_model,
                 processor=clip_processor,
-                top_k=3
+                top_k=3,
+                category=key  # カテゴリを大文字にしてPineconeのフィルタリングに対応
             )
             logger.info(f"検索結果 ({key}): {matches}")
             # 必要情報だけフロントへ

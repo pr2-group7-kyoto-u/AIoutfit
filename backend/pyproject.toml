@@ -22,6 +22,9 @@ dependencies = [
     "torchvision>=0.22.1",
     "tqdm>=4.67.1",
     "transformers>=4.52.4",
-    "pycountry (>=24.6.1,<25.0.0)",
+    "pycountry>=24.6.1,<25.0.0",
     "boto3>=1.39.3",
+    "einops>=0.8.1",
+    "timm>=1.0.17",
+    "dotenv>=0.9.9",
 ]

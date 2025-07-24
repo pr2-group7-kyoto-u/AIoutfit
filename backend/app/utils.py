@@ -53,7 +53,7 @@ def initialize_services():
     embedding_dim = model.config.projection_dim
     if INDEX_NAME not in pc.list_indexes().names():
         logger.info(f"Creating index '{INDEX_NAME}' with dimension {embedding_dim}...")
-        pc.create_index(name=INDEX_NAME, dimension=embedding_dim, metric="cosine", spec=ServerlessSpec(cloud='aws', region='us-west-2'))
+        pc.create_index(name=INDEX_NAME, dimension=embedding_dim, metric="cosine", spec=ServerlessSpec(cloud='aws', region='us-east-1'))
         logger.info("Index created successfully.")
     else:
         logger.info(f"Index '{INDEX_NAME}' already exists.")
@@ -121,11 +121,16 @@ def upload_image_to_pinecone(image_bytes: bytes, user_id: str, item_metadata: di
         logger.error(f"An unexpected error occurred during upload process: {e}")
         return {"success": False, "error": str(e)}
 
-def search_items_for_user(query: str, user_id: str, index: Pinecone.Index, model: CLIPModel, processor: CLIPProcessor, top_k: int) -> list:
+def search_items_for_user(query: str, user_id: str, index: Pinecone.Index, model: CLIPModel, processor: CLIPProcessor, top_k: int, category:str) -> list:
     """指定したユーザーのアイテムの中から、テキストクエリで検索する。"""
     query_vector = embed_text(query, model, processor)
     logger.info(f"Searching for items for user '{user_id}' with query: '{query}'")
-    result = index.query(vector=query_vector, top_k=top_k, include_metadata=True, namespace=user_id)
+    result = index.query(
+     vector=query_vector, 
+     top_k=top_k, 
+     include_metadata=True, 
+     namespace=user_id,
+     filter={"category": {"$eq": category}} )
     return result.get('matches', [])
 
 # --- 高レベル "頭脳" 関数 (LLM連携) ---
@@ -192,19 +197,18 @@ def main():
     logger.info(f"\n--- 1. Setting up test data for user '{test_user_id}' ---")
     
     # 既存のテストデータをクリーンアップ
-    try:
-        services["index"].delete(delete_all=True, namespace=test_user_id)
-        logger.warning(f"Cleared all previous data for namespace '{test_user_id}'.")
-        time.sleep(5) # 削除が反映されるまで少し待つ
-    except Exception as e:
-        logger.error(f"Could not clear namespace (it might be empty): {e}")
+    # try:
+    #     services["index"].delete(delete_all=True, namespace=test_user_id)
+    #     logger.warning(f"Cleared all previous data for namespace '{test_user_id}'.")
+    #     time.sleep(5) # 削除が反映されるまで少し待つ
+    # except Exception as e:
+    #     logger.error(f"Could not clear namespace (it might be empty): {e}")
 
     items_to_upload = [
-        {"url": "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a", "metadata": {"category": "top", "description": "A simple black t-shirt"}},
-        {"url": "https://images.unsplash.com/photo-1551028719-00167b16eac5", "metadata": {"category": "outer", "description": "A light beige trench coat"}},
-        {"url": "https://images.unsplash.com/photo-1602293589914-9b29dfc2781d", "metadata": {"category": "bottom", "description": "A pair of classic blue jeans"}},
-        {"url": "https://images.unsplash.com/photo-1525966222134-fc3011e74978", "metadata": {"category": "shoes", "description": "A pair of classic black and white sneakers"}},
-        {"url": "https://images.unsplash.com/photo-1617137968427-4dd474f33979", "metadata": {"category": "top", "description": "A formal white button-down shirt"}}
+        {
+        "image_url": "https://m.media-amazon.com/images/I/51UHCwlXC7L._UY900_.jpg",
+        "metadata": {"category": "top", "description": "formal white button‑down shirt", "color": "white"},
+        }
     ]
     for item in items_to_upload:
         try:

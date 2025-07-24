@@ -85,6 +85,10 @@ const ResultPage: React.FC = () => {
       // すでに完全なURLの場合は、不要な/browser/を削除する
       return path.replace('/browser/', '/');
     }
+    if (!path.startsWith('/images')) {
+      // 画像パスが /images/ で始まらない場合は、適切なパスに変換
+      path = `/images/${path}`;
+    }
     
     const baseUrl = process.env.REACT_APP_MINIO_PUBLIC_URL || "";
     // pathから先頭のスラッシュと、万が一含まれている/browser/を削除
