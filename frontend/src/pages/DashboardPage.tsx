@@ -9,8 +9,11 @@ interface Cloth {
   name: string;
   color: string;
   category: string;
-  image_url?: string; // 画像URLはオプショナル
+  image_url?: string; // 画像URLはオプショナル（例: 153b4d1d-cff7-4035-a356-18e59d71c125.jpg）
 }
+
+// ★★★ MinIOのベースURLをコンポーネント内で定義 ★★★
+const MINIO_BASE_URL = 'http://localhost:9000/images/';
 
 const DashboardPage: React.FC = () => {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
@@ -42,11 +45,9 @@ const DashboardPage: React.FC = () => {
     if (user) {
       const fetchInitialData = async () => {
         try {
-          // 服と過去の提案を両方取得する
           const clothesResult = await api.getClothes(user.id);
           if (Array.isArray(clothesResult)) setClothes(clothesResult);
 
-          // 過去の提案履歴を取得するAPIを呼び出す
           const pastResult = await api.getPastSuggestions();
           if (Array.isArray(pastResult)) setOutfitSuggestions(pastResult);
 
@@ -58,7 +59,7 @@ const DashboardPage: React.FC = () => {
       fetchInitialData();
     }
   }, [isLoading, isAuthenticated, user, navigate]);
-  
+
   // 服の追加処理
   const handleAddCloth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,14 +80,11 @@ const DashboardPage: React.FC = () => {
       const result = await api.addCloth(clothData, selectedImageFile);
 
       setMessage(result.message);
-      // バックエンドのレスポンスにclothオブジェクトが含まれているか確認
       if (result.cloth) {
-        // 成功したらフォームをリセット
         setNewClothName('');
         setNewClothCategory('');
         setNewClothColor('');
         setSelectedImageFile(null);
-        // 服リストを再取得して画面を更新
         const updatedClothes = await api.getClothes(user.id);
         if (Array.isArray(updatedClothes)) setClothes(updatedClothes);
       }
@@ -103,7 +101,6 @@ const DashboardPage: React.FC = () => {
     try {
       const result = await api.suggestOutfits(user.id, suggestedDate, occasion, location);
       if (result.suggestions) {
-        // 新しい提案を、既存の履歴リストの「先頭」に追加して画面を更新
         setOutfitSuggestions(prevSuggestions => [...result.suggestions, ...prevSuggestions]);
       }
       setMessage(result.message || "コーデを提案しました。");
@@ -132,15 +129,12 @@ const DashboardPage: React.FC = () => {
       <h3>服の登録</h3>
       <form onSubmit={handleAddCloth}>
         <input type="text" placeholder="服の名前 (例: 半袖Tシャツ)" value={newClothName} onChange={(e) => setNewClothName(e.target.value)} required />
-        
         <select value={newClothCategory} onChange={(e) => setNewClothCategory(e.target.value)} required>
           <option value="" disabled>カテゴリを選択</option>
           <option value="tops">トップス</option>
           <option value="bottoms">ボトムス</option>
           <option value="shoes">シューズ</option>
         </select>
-
-        {/* ▼▼▼ ここを変更 ▼▼▼ */}
         <select value={newClothColor} onChange={(e) => setNewClothColor(e.target.value)}>
           <option value="" disabled>色を選択 (任意)</option>
           <option value="黒">黒</option>
@@ -154,13 +148,10 @@ const DashboardPage: React.FC = () => {
           <option value="赤">赤</option>
           <option value="その他">その他</option>
         </select>
-        {/* ▲▲▲ ここまで変更 ▲▲▲ */}
-        
         <div>
           <label>画像 (任意): </label>
           <input type="file" accept="image/*" onChange={(e) => setSelectedImageFile(e.target.files ? e.target.files[0] : null)} />
         </div>
-
         <button type="submit">この服を登録する</button>
       </form>
 
@@ -169,7 +160,18 @@ const DashboardPage: React.FC = () => {
         {clothes.map((cloth) => (
           <li key={cloth.id}>
             {cloth.name} ({cloth.color}, {cloth.category})
-            {cloth.image_url && <img src={cloth.image_url} alt={cloth.name} style={{height: '50px', marginLeft: '10px'}} />}
+            {/* ▼▼▼ ここを修正 ▼▼▼ */}
+            {cloth.image_url && (
+              <>
+                {console.log(`${MINIO_BASE_URL}${cloth.image_url}`)}
+                <img 
+                  src={`${MINIO_BASE_URL}${cloth.image_url}`} 
+                  alt={cloth.name} 
+                  style={{height: '50px', marginLeft: '10px'}} 
+                />
+              </>
+            )}
+            {/* ▲▲▲ ここまで修正 ▲▲▲ */}
           </li>
         ))}
       </ul>
