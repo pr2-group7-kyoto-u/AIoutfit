@@ -180,7 +180,7 @@ const SuggestionPage: React.FC = () => {
       </div>
 
       <div style={{ marginTop: '20px', textAlign: 'center' }}>
-        <Link to="/dashboard" 
+        <Link to="/" 
           style={{ 
             color: '#6c757d', 
             textDecoration: 'none', 
@@ -188,7 +188,7 @@ const SuggestionPage: React.FC = () => {
             transition: 'color 0.2s ease'
           }}
         >
-          相談をやめてダッシュボードに戻る
+          相談をやめてホームページに戻る
         </Link>
       </div>
     </div>
