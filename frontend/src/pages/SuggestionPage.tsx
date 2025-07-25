@@ -86,65 +86,109 @@ const SuggestionPage: React.FC = () => {
   };
 
   return (
-    <div>
-      <h2>AIコーデ相談 (全身提案モード)</h2>
+    <div style={{ padding: '20px', maxWidth: '800px', margin: '20px auto', backgroundColor: '#fff', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+      <h2 style={{ textAlign: 'center', marginBottom: '20px', color: '#333' }}>AIコーデ相談 (全身提案モード)</h2>
       
-      <div style={{ height: '500px', overflowY: 'scroll', border: '1px solid #ccc', padding: '10px', marginBottom: '10px' }}>
+      <div style={{ height: '500px', overflowY: 'auto', border: '1px solid #eee', padding: '15px', marginBottom: '15px', borderRadius: '8px', backgroundColor: '#f9f9f9' }}>
         {history.map((msg, index) => (
-          <div key={index} style={{ textAlign: msg.role === 'user' ? 'right' : 'left', margin: '5px 0' }}>
-            <div style={{ whiteSpace: 'pre-wrap', display: 'inline-block', padding: '8px 12px', borderRadius: '10px', backgroundColor: msg.role === 'user' ? '#dcf8c6' : '#f1f0f0' }}>
-              <strong>{msg.role === 'user' ? (user?.username || 'You') : 'AIスタイリスト'}:</strong><br/>
+          <div key={index} style={{ textAlign: msg.role === 'user' ? 'right' : 'left', margin: '10px 0' }}>
+            <div style={{ 
+                whiteSpace: 'pre-wrap', 
+                display: 'inline-block', 
+                padding: '10px 15px', 
+                borderRadius: '18px', /* より丸く */
+                backgroundColor: msg.role === 'user' ? '#DCF8C6' : '#E0E0E0', /* 色を調整 */
+                maxWidth: '70%', /* 吹き出しの最大幅を制限 */
+                boxShadow: '0 1px 2px rgba(0,0,0,0.1)' /* 軽い影 */
+              }}>
+              <strong style={{ color: msg.role === 'user' ? '#007bff' : '#333' }}>{msg.role === 'user' ? (user?.username || 'You') : 'AIスタイリスト'}:</strong><br/>
               {msg.content}
             </div>
           </div>
         ))}
-        {isLoading && <p style={{textAlign: 'center'}}>AIが考えています...</p>}
+        {isLoading && <p style={{textAlign: 'center', color: '#666'}}>AIが考えています...</p>}
         <div ref={chatEndRef} />
       </div>
 
       {currentSuggestion && !isLoading && (
-        <div style={{ border: '1px solid #007bff', padding: '10px', margin: '10px 0', borderRadius: '8px' }}>
-          <h4>今回の提案コーデ</h4>
-          <ul>
+        <div style={{ border: '1px solid #007bff', padding: '15px', margin: '15px 0', borderRadius: '10px', backgroundColor: '#eef7ff', boxShadow: '0 2px 5px rgba(0, 123, 255, 0.1)' }}>
+          <h4 style={{ textAlign: 'center', marginBottom: '10px', color: '#007bff' }}>今回の提案コーデ</h4>
+          <ul style={{ listStyle: 'none', padding: '0', margin: '0' }}>
             {/* ワンピース判定 */}
             {currentSuggestion.tops === currentSuggestion.bottoms ? (
-              <li><strong>Tops & Bottoms:</strong> {currentSuggestion.tops}</li>
+              <li style={{ padding: '5px 0', borderBottom: '1px dotted #ccc' }}><strong>Tops & Bottoms:</strong> {currentSuggestion.tops}</li>
             ) : (
               <>
-                <li><strong>Tops:</strong> {currentSuggestion.tops}</li>
-                <li><strong>Bottoms:</strong> {currentSuggestion.bottoms}</li>
+                <li style={{ padding: '5px 0', borderBottom: '1px dotted #ccc' }}><strong>Tops:</strong> {currentSuggestion.tops}</li>
+                <li style={{ padding: '5px 0', borderBottom: '1px dotted #ccc' }}><strong>Bottoms:</strong> {currentSuggestion.bottoms}</li>
               </>
             )}
-            <li><strong>Shoes:</strong> {currentSuggestion.shoes}</li>
+            <li style={{ padding: '5px 0' }}><strong>Shoes:</strong> {currentSuggestion.shoes}</li>
           </ul>
         </div>
       )}
 
-      <div style={{ borderTop: '1px solid #ccc', paddingTop: '10px' }}>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px' }}>
+      <div style={{ borderTop: '1px solid #eee', paddingTop: '15px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={isLoading ? "AIが応答中です..." : "追加情報や要望を入力..."}
-            style={{ flexGrow: 1, padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            style={{ flexGrow: 1, padding: '12px', borderRadius: '25px', border: '1px solid #ddd', fontSize: '1em' }} /* 丸い入力欄 */
             disabled={isLoading}
           />
-          <button type="submit" style={{ padding: '10px 15px', borderRadius: '5px', border: 'none', backgroundColor: '#28a745', color: 'white', cursor: 'pointer' }} disabled={isLoading}>
+          <button type="submit" 
+            style={{ 
+              padding: '12px 20px', 
+              borderRadius: '25px', /* 丸いボタン */
+              border: 'none', 
+              backgroundColor: '#28a745', 
+              color: 'white', 
+              cursor: 'pointer', 
+              fontSize: '1em',
+              fontWeight: 'bold',
+              transition: 'background-color 0.2s ease',
+              flexShrink: 0 /* 幅が縮まないように */
+            }} 
+            disabled={isLoading}>
             送信して更新
           </button>
         </form>
         <button 
           onClick={handleConfirm} 
           disabled={isLoading || !currentSuggestion}
-          style={{ width: '100%', padding: '10px', marginTop: '10px', borderRadius: '5px', border: 'none', backgroundColor: '#007bff', color: 'white', cursor: 'pointer' }}
+          // ★幅の修正: width: 'auto'または固定幅を設定
+          style={{ 
+            display: 'block', /* 中央揃えのためにブロック要素にする */
+            margin: '0 auto', /* 中央揃え */
+            padding: '12px 25px', /* パディングで幅を調整 */
+            marginTop: '10px', 
+            borderRadius: '25px', /* 丸いボタン */
+            border: 'none', 
+            backgroundColor: '#007bff', 
+            color: 'white', 
+            cursor: 'pointer',
+            fontSize: '1.1em',
+            fontWeight: 'bold',
+            transition: 'background-color 0.2s ease'
+          }}
         >
           このコーデで確定
         </button>
       </div>
 
-      <div style={{ marginTop: '20px' }}>
-        <Link to="/dashboard">相談をやめてダッシュボードに戻る</Link>
+      <div style={{ marginTop: '20px', textAlign: 'center' }}>
+        <Link to="/dashboard" 
+          style={{ 
+            color: '#6c757d', 
+            textDecoration: 'none', 
+            fontSize: '0.9em',
+            transition: 'color 0.2s ease'
+          }}
+        >
+          相談をやめてダッシュボードに戻る
+        </Link>
       </div>
     </div>
   );
