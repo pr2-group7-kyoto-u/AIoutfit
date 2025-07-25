@@ -9,8 +9,11 @@ interface Cloth {
   name: string;
   color: string;
   category: string;
-  image_url?: string; // 画像URLはオプショナル
+  image_url?: string; // 画像URLはオプショナル（例: 153b4d1d-cff7-4035-a356-18e59d71c125.jpg）
 }
+
+// ★★★ MinIOのベースURLをコンポーネント内で定義 ★★★
+const MINIO_BASE_URL = 'http://localhost:9000/images/';
 
 const DashboardPage: React.FC = () => {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
@@ -40,16 +43,20 @@ const DashboardPage: React.FC = () => {
       return;
     }
     if (user) {
-      const fetchUserClothes = async () => {
+      const fetchInitialData = async () => {
         try {
-          const result = await api.getClothes(user.id);
-          if (Array.isArray(result)) setClothes(result);
+          const clothesResult = await api.getClothes(user.id);
+          if (Array.isArray(clothesResult)) setClothes(clothesResult);
+
+          const pastResult = await api.getPastSuggestions();
+          if (Array.isArray(pastResult)) setOutfitSuggestions(pastResult);
+
         } catch (error) {
-          console.error("Failed to fetch clothes:", error);
-          setMessage("服の読み込みに失敗しました。");
+          console.error("Failed to fetch initial data:", error);
+          setMessage("データの読み込みに失敗しました。");
         }
       };
-      fetchUserClothes();
+      fetchInitialData();
     }
   }, [isLoading, isAuthenticated, user, navigate]);
 
@@ -73,14 +80,11 @@ const DashboardPage: React.FC = () => {
       const result = await api.addCloth(clothData, selectedImageFile);
 
       setMessage(result.message);
-      // バックエンドのレスポンスにclothオブジェクトが含まれているか確認
       if (result.cloth) {
-        // 成功したらフォームをリセット
         setNewClothName('');
         setNewClothCategory('');
         setNewClothColor('');
         setSelectedImageFile(null);
-        // 服リストを再取得して画面を更新
         const updatedClothes = await api.getClothes(user.id);
         if (Array.isArray(updatedClothes)) setClothes(updatedClothes);
       }
@@ -97,10 +101,10 @@ const DashboardPage: React.FC = () => {
     try {
       const result = await api.suggestOutfits(user.id, suggestedDate, occasion, location);
       if (result.suggestions) {
-        setOutfitSuggestions(result.suggestions);
+        setOutfitSuggestions(prevSuggestions => [...result.suggestions, ...prevSuggestions]);
       }
       setMessage(result.message || "コーデを提案しました。");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to suggest outfits:", error);
       setMessage("コーデの提案に失敗しました。");
     }
@@ -125,14 +129,29 @@ const DashboardPage: React.FC = () => {
       <h3>服の登録</h3>
       <form onSubmit={handleAddCloth}>
         <input type="text" placeholder="服の名前 (例: 半袖Tシャツ)" value={newClothName} onChange={(e) => setNewClothName(e.target.value)} required />
-        <input type="text" placeholder="カテゴリ (例: トップス)" value={newClothCategory} onChange={(e) => setNewClothCategory(e.target.value)} required />
-        <input type="text" placeholder="色 (例: 黒)" value={newClothColor} onChange={(e) => setNewClothColor(e.target.value)} />
-        
+        <select value={newClothCategory} onChange={(e) => setNewClothCategory(e.target.value)} required>
+          <option value="" disabled>カテゴリを選択</option>
+          <option value="tops">トップス</option>
+          <option value="bottoms">ボトムス</option>
+          <option value="shoes">シューズ</option>
+        </select>
+        <select value={newClothColor} onChange={(e) => setNewClothColor(e.target.value)}>
+          <option value="" disabled>色を選択 (任意)</option>
+          <option value="黒">黒</option>
+          <option value="白">白</option>
+          <option value="グレー">グレー</option>
+          <option value="ネイビー">ネイビー</option>
+          <option value="ベージュ">ベージュ</option>
+          <option value="ブラウン">ブラウン</option>
+          <option value="グリーン">グリーン</option>
+          <option value="青">青</option>
+          <option value="赤">赤</option>
+          <option value="その他">その他</option>
+        </select>
         <div>
           <label>画像 (任意): </label>
           <input type="file" accept="image/*" onChange={(e) => setSelectedImageFile(e.target.files ? e.target.files[0] : null)} />
         </div>
-
         <button type="submit">この服を登録する</button>
       </form>
 
@@ -141,7 +160,18 @@ const DashboardPage: React.FC = () => {
         {clothes.map((cloth) => (
           <li key={cloth.id}>
             {cloth.name} ({cloth.color}, {cloth.category})
-            {cloth.image_url && <img src={cloth.image_url} alt={cloth.name} style={{height: '50px', marginLeft: '10px'}} />}
+            {/* ▼▼▼ ここを修正 ▼▼▼ */}
+            {cloth.image_url && (
+              <>
+                {console.log(`${MINIO_BASE_URL}${cloth.image_url}`)}
+                <img 
+                  src={`${MINIO_BASE_URL}${cloth.image_url}`} 
+                  alt={cloth.name} 
+                  style={{height: '50px', marginLeft: '10px'}} 
+                />
+              </>
+            )}
+            {/* ▲▲▲ ここまで修正 ▲▲▲ */}
           </li>
         ))}
       </ul>
@@ -156,18 +186,22 @@ const DashboardPage: React.FC = () => {
       {message && <p>{message}</p>}
       
       <h3>提案されたコーデ</h3>
-      {outfitSuggestions.length > 0 && (
+      {outfitSuggestions.length > 0 ? (
         <div>
           {outfitSuggestions.map((suggestion: any, index: number) => (
-            <div key={index} style={{ border: '1px solid #ccc', margin: '10px', padding: '10px' }}>
-              <h4>コーデ {index + 1}</h4>
+            <div key={suggestion.suggestion_id || index} style={{ border: '1px solid #ccc', margin: '10px', padding: '10px' }}>
+              <h4>{suggestion.suggested_date ? `${suggestion.suggested_date}の提案` : `新しいコーデ ${index + 1}`}</h4>
+              {suggestion.occasion_info && <p>シーン: {suggestion.occasion_info} ({suggestion.weather_info})</p>}
               <p>トップス: {suggestion.top?.name} ({suggestion.top?.color})</p>
               <p>ボトムス: {suggestion.bottom?.name} ({suggestion.bottom?.color})</p>
               {suggestion.outer && <p>アウター: {suggestion.outer?.name} ({suggestion.outer?.color})</p>}
-              <p>理由: {suggestion.reason}</p>
+              {suggestion.shoes && <p>シューズ: {suggestion.shoes?.name} ({suggestion.shoes?.color})</p>}
+              {suggestion.reason && <p>理由: {suggestion.reason}</p>}
             </div>
           ))}
         </div>
+      ) : (
+        <p>過去の提案履歴はありません。フォームから新しいコーデを提案できます。</p>
       )}
     </div>
   );

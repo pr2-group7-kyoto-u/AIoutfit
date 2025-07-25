@@ -9,8 +9,6 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
-    age = Column(String(10))
-    gender = Column(String(10))
     preferred_style = Column(String(255))
     created_at = Column(DateTime, default=func.now())
     age = Column(Integer, nullable=True)
@@ -30,6 +28,8 @@ class Cloth(Base):
     material = Column(String(255))
     season = Column(String(255)) # 例: '春,夏', '秋,冬'
     is_formal = Column(Boolean, default=False)
+    available = Column(Boolean, default=True)
+    preferred = Column(Boolean, default=False)
     image_url = Column(String(255))
     vector = Column(JSON) # JSONとしてベクトルを保存。または別途ベクトルDBへ
 
@@ -42,17 +42,13 @@ class OutfitSuggestion(Base):
     suggested_date = Column(Date, nullable=False)
     top_id = Column(Integer, ForeignKey('clothes.id'))
     bottom_id = Column(Integer, ForeignKey('clothes.id'))
-    outer_id = Column(Integer, ForeignKey('clothes.id'))
+    shoes_id = Column(Integer, ForeignKey('clothes.id'))
     # 他のアイテムのIDを追加するならここへ
-    weather_info = Column(String(255))
-    occasion_info = Column(String(255)) # 外出先、会う相手
-    suggested_at = Column(DateTime, default=func.now())
-    feedback_rating = Column(Integer) # ユーザーからの評価 (1-5など)
 
     user = relationship("User", back_populates="suggestions")
     top = relationship("Cloth", foreign_keys=[top_id])
     bottom = relationship("Cloth", foreign_keys=[bottom_id])
-    outer = relationship("Cloth", foreign_keys=[outer_id])
+    shoes = relationship("Cloth", foreign_keys=[shoes_id])
 
 class UserPreference(Base):
     __tablename__ = 'user_preferences'

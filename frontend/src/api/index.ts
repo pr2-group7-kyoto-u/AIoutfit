@@ -39,6 +39,13 @@ export interface HistoryMessage {
   content: string;
 }
 
+export interface SuggestionItems {
+  tops: string;
+  bottoms: string;
+  shoes: string;
+  outerwear?: string | null;
+}
+
 const api = {
   register: (username: string, password: string, age?: string, gender?: string) =>
     fetch('/api/register', {
@@ -76,6 +83,32 @@ const api = {
     const response = await fetchWithAuth('/api/clothes', {
       method: 'POST',
       body: formData,
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
+
+  getPastSuggestions: async () => {
+    const response = await fetchWithAuth('/api/suggestions');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(errorData.message);
+    }
+    return response.json();
+  },
+
+  saveSuggestion: async (suggestionData: {
+    suggested_date: string;
+    top_id: number;
+    bottom_id: number;
+    shoes_id?: number;
+  }) => {
+    const response = await fetchWithAuth('/api/suggestions', {
+      method: 'POST',
+      body: JSON.stringify(suggestionData),
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'サーバーエラー' }));
@@ -132,6 +165,20 @@ const api = {
     }
     return response.json();
   },
+
+  fetchOutfitImages: async (payload: SuggestionItems) => {
+    const response = await fetchWithAuth('/api/search/outfit', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: 'サーバーエラー' }));
+      throw new Error(err.message);
+    }
+    console.log("fetchOutfitImages response:", response);
+    return response.json();   // ← ResultPage で受け取る { tops: [..], bottoms: [..], shoes: [..] }
+  },
 };
 
 export default api;
+export const { fetchOutfitImages } = api;

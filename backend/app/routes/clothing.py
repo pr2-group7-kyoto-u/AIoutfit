@@ -10,7 +10,7 @@ from app.database import get_db_session
 from app.models import Cloth
 
 # Pinecone関連のユーティリティをインポート
-from app.utils import initialize_services, upload_image_to_pinecone
+from app.utils import initialize_services, upload_image_to_pinecone, search_items_for_user
 from PIL import Image
 from io import BytesIO
 from loguru import logger # デバッグ用のロギングを有効にするため
@@ -22,13 +22,10 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 # ブループリントが作成された際に一度Pineconeサービスを初期化する
 # より大規模なアプリケーションでは、app.pyや専用のサービスレイヤーで初期化を検討してください
 try:
-    # 画像の埋め込みとPineconeへのアップロードには、インデックス、モデル、プロセッサーのみが必要
-    # openai_clientは服の登録では直接使用されない
     clip_model, clip_processor, pinecone_index, _ = initialize_services()
     logger.info("clothing_bpでPineconeとCLIPサービスが初期化されました。")
 except Exception as e:
     logger.error(f"clothing_bpでPineconeとCLIPサービスの初期化に失敗しました: {e}")
-    # サービスが失敗した場合、画像の埋め込みを無効にするなど、適切にエラーを処理してください
     clip_model = None
     clip_processor = None
     pinecone_index = None
@@ -99,7 +96,7 @@ def add_cloth():
                 )
                 
                 # 公開URLもユニークなファイル名で生成
-                image_url = f"/images/{unique_filename}"
+                image_url = f"{unique_filename}"
                 logger.info(f"MinIOに画像をアップロードしました: {image_url}")
 
                 # Pineconeへのアップロード処理
@@ -119,7 +116,8 @@ def add_cloth():
                         item_metadata=item_metadata,
                         index=pinecone_index,
                         model=clip_model,
-                        processor=clip_processor
+                        processor=clip_processor,
+                        image_url=image_url
                     )
                     if pinecone_upload_result.get("success"):
                         logger.success(f"項目ID {pinecone_upload_result.get('item_id')} の画像ベクトルがPineconeにアップロードされました")
@@ -182,3 +180,35 @@ def get_user_clothes(user_id):
         session.rollback()
         logger.error(f"get_user_clothesでエラーが発生しました: {str(e)}")
         return jsonify({"message": f"エラーが発生しました: {str(e)}"}), 500
+    
+    
+@clothing_bp.route('/api/search/outfit', methods=['POST'])
+@jwt_required()
+def search_outfit():
+    data = request.get_json()
+    current_user_id = get_jwt_identity()
+
+    results = {}
+    for key in ['tops', 'bottoms', 'shoes']:
+        query = data.get(key)
+        if query:
+            matches = search_items_for_user(
+                query=query,
+                user_id=current_user_id,
+                # 修正後: モジュールレベルの変数を利用
+                index=pinecone_index,
+                model=clip_model,
+                processor=clip_processor,
+                top_k=3,
+                category=key  # カテゴリを大文字にしてPineconeのフィルタリングに対応
+            )
+            logger.info(f"検索結果 ({key}): {matches}")
+            # 必要情報だけフロントへ
+            results[key] = [
+                {
+                    'image_url': m['metadata'].get('image_url'),
+                    'score': m['score'],
+                    'metadata': m['metadata']
+                } for m in matches
+            ]
+    return jsonify(results), 200

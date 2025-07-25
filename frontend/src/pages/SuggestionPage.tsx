@@ -62,8 +62,7 @@ const SuggestionPage: React.FC = () => {
 
       // AIが最終提案と判断した場合
       if (res.type === 'final_suggestion') {
-        alert("コーディネートが確定しました！ダッシュボードに戻ります。");
-        navigate('/dashboard'); 
+        navigate('/result', { state: { suggestion: res.suggestion_items } }); 
       }
     } catch (error: any) {
       const errorMessage = error.message || 'エラーが発生しました。もう一度お試しください。';
@@ -83,6 +82,8 @@ const SuggestionPage: React.FC = () => {
   const handleConfirm = () => {
     if (isLoading) return;
     handleResponse("このコーディネートで確定します。");
+
+    navigate('/result', { state: { suggestion: currentSuggestion } });
   };
 
   return (
