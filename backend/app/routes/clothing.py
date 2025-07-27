@@ -1,6 +1,7 @@
 import os
 import uuid
 import boto3
+import openai
 from botocore.client import Config
 from botocore.exceptions import NoCredentialsError
 from flask import Blueprint, request, jsonify, current_app
@@ -182,33 +183,124 @@ def get_user_clothes(user_id):
         return jsonify({"message": f"エラーが発生しました: {str(e)}"}), 500
     
     
+
 @clothing_bp.route('/api/search/outfit', methods=['POST'])
 @jwt_required()
 def search_outfit():
+    """
+    クエリに基づいて最適な服の組み合わせを検索する。
+    1. 各カテゴリ（トップス、ボトムス、シューズ）でベクトル検索を実行し、候補を複数取得する。
+    2. LLM（OpenAI API）を使い、候補の中からクエリに最も一致するアイテムを1つ選択させる。
+    3. 最も一致したアイテムをカテゴリごとに返す。
+    """
     data = request.get_json()
-    current_user_id = get_jwt_identity()
+    if not data:
+        return jsonify({"message": "リクエストボディが空です"}), 400
 
-    results = {}
-    for key in ['tops', 'bottoms', 'shoes']:
-        query = data.get(key)
-        if query:
-            matches = search_items_for_user(
+    current_user_id = get_jwt_identity()
+    
+    # OpenAIクライアントの初期化
+    try:
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not openai_api_key:
+            logger.error("OPENAI_API_KEY環境変数が設定されていません。")
+            return jsonify({"message": "サーバーエラー: OpenAI APIキーが設定されていません"}), 500
+        openai_client = openai.OpenAI(api_key=openai_api_key)
+    except Exception as e:
+        logger.error(f"OpenAIクライアントの初期化に失敗しました: {e}")
+        return jsonify({"message": f"サーバーエラー: {e}"}), 500
+
+    best_matches = {}
+    # 'tops', 'bottoms', 'shoes' の各カテゴリに対して処理を実行
+    for category in ['tops', 'bottoms', 'shoes']:
+        query = data.get(category)
+        if not query:
+            continue
+
+        # 1. Pineconeでベクトル検索を実行し、候補を取得 (top_k=3)
+        try:
+            search_results = search_items_for_user(
                 query=query,
                 user_id=current_user_id,
-                # 修正後: モジュールレベルの変数を利用
                 index=pinecone_index,
                 model=clip_model,
                 processor=clip_processor,
-                top_k=3,
-                category=key  # カテゴリを大文字にしてPineconeのフィルタリングに対応
+                top_k=3,  # LLMに評価させるため、複数の候補を取得
+                category=category
             )
-            logger.info(f"検索結果 ({key}): {matches}")
-            # 必要情報だけフロントへ
-            results[key] = [
-                {
-                    'image_url': m['metadata'].get('image_url'),
-                    'score': m['score'],
-                    'metadata': m['metadata']
-                } for m in matches
-            ]
-    return jsonify(results), 200
+            logger.info(search_results)
+
+            if not search_results:
+                best_matches[category] = None
+                continue
+
+        except Exception as e:
+            logger.error(f"'{category}'のベクトル検索中にエラーが発生しました: {e}")
+            best_matches[category] = {"error": "検索中にエラーが発生しました"}
+            continue
+
+        # 2. LLMに最も一致するアイテムを選択させる
+        try:
+            # LLMへの入力（プロンプト）を作成
+            candidates_for_prompt = []
+            for i, item in enumerate(search_results):
+                # search_items_for_userが返すitemオブジェクトに 'id' が含まれている必要があります
+                item_id = item.get('id') 
+                meta = item.get('metadata', {})
+                candidates_for_prompt.append(
+                    f"候補{i+1} (ID: {item_id}):\n"
+                    f"  - 説明: {meta.get('description', '説明なし')}\n"
+                )
+            
+            prompt_text = (
+                f"あなたはプロのスタイリストです。ユーザーの要望に最も合う服を、以下の候補リストから1つだけ選んでください。\n\n"
+                f"## ユーザーの要望\n"
+                f"「{query}」\n\n"
+                f"## 服の候補リスト\n"
+                f"{''.join(candidates_for_prompt)}\n"
+                f"-----\n\n"
+                f"## あなたのタスク\n"
+                f"上記リストの中から最も要望に合う服の「ID」を一つだけ選び、そのIDの文字列を**完全にコピーして**回答してください。"
+                f"説明やID以外の言葉は一切含めないでください。"
+            )
+            logger.info(f"LLMへのプロンプト: {prompt_text}")
+
+            # OpenAI APIを呼び出し
+            response = openai_client.chat.completions.create(
+                model="gpt-4o",  # または "gpt-4" など高性能なモデルを推奨
+                messages=[{"role": "user", "content": prompt_text}],
+                max_tokens=60, # IDのみを返すため、トークン数は少なく設定
+                temperature=0, # 再現性を高めるために0に設定
+            )
+            logger.info(f"LLMの応答: {response.choices[0].message.content.strip()}")
+            
+            best_item_id = response.choices[0].message.content.strip()
+            logger.success(f"LLMが選択したID ({category}): {best_item_id}")
+
+            # 3. 選択されたIDを元に、元の検索結果から完全な情報を取得
+            best_item = next((item for item in search_results if item.get('id') == best_item_id), None)
+
+            # LLMがIDを正しく返さなかった場合のフォールバックとして、ベクトル検索のスコアが最も高いものを採用
+            if not best_item:
+                logger.warning(f"LLMが返したID '{best_item_id}' が候補に存在しません。ベクトル検索の最上位の結果を返します。")
+                best_item = search_results[0]
+            
+            # フロントエンドに返す情報を整形
+            best_matches[category] = [{
+                'image_url': best_item['metadata'].get('image_url'),
+                'score': best_item['score'],
+                'metadata': best_item['metadata']
+            }]
+
+        except Exception as e:
+            logger.error(f"OpenAI APIの呼び出し中にエラーが発生しました: {e}")
+            # エラーが発生した場合は、ベクトル検索の最上位の結果をフォールバックとして返す
+            best_item = search_results[0]
+            best_matches[category] = [{
+                'image_url': best_item['metadata'].get('image_url'),
+                'score': best_item['score'],
+                'metadata': best_item['metadata'],
+                'error': 'LLMによる評価中にエラーが発生しました。'
+            }]
+
+    return jsonify(best_matches), 200

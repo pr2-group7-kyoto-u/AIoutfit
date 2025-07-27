@@ -134,6 +134,7 @@ const ResultPage: React.FC = () => {
           >
             {categories.map((c) => {
               const matches = images[c as keyof SearchResponse];
+              console.log(matches, "matches for category:", c);
               if (!matches || matches.length === 0) return null;
               const best = matches[0];
               return (

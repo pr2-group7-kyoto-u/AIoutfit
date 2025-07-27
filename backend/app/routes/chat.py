@@ -34,7 +34,7 @@ def create_iterative_system_prompt(weather_info: str = None) -> str:
       "bottoms": "提案するボトムスのアイテム名"(デフォルトはジーンズ),
       "shoes": "提案する靴のアイテム名（デフォルトはスニーカー）"
   }},
-  weather_info: "{weather_info}" if weather_info else "現在の天気情報はありません",
+  weather_info: "{weather_info["weather"][0]["description"]}" if weather_info else "現在の天気情報はありません",
   "updated_slots": {{
       "date": "収集した日付情報 or null",
       "location_geo": "収集した地理情報 or null",
@@ -83,7 +83,7 @@ def propose_outfit():
         return jsonify({"message": "メッセージは必須です。"}), 400
     
     weather_info = get_weather_info(('Kyoto, Japan'), 1)
-    logger.info(f"Weather info: {weather_info}")
+    logger.info(weather_info["weather"][0]["description"])
     messages_for_api = [
         {"role": "system", "content": create_iterative_system_prompt(weather_info=weather_info)},
     ]
