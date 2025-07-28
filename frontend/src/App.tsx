@@ -31,6 +31,8 @@ const App: React.FC = () => {
             <Route path="/uploadclothing" element={<UploadPage />} />
             <Route path="/checkclothing" element={<CheckPage />} />
             <Route path="/result" element={<ResultPage />} />
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </div>
       </Router>
