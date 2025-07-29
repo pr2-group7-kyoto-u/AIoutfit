@@ -182,7 +182,7 @@ const DashboardPage: React.FC = () => {
       <br/>
       <Link to="/suggest">AIとコーデを相談する</Link> 
       <br/>
-      <Link to="/">ホームに戻る</Link>
+      <Link to="/home">ホームに戻る</Link>
 
       <h3>服の登録</h3>
       <form onSubmit={handleAddCloth}>

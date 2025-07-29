@@ -2,11 +2,16 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 
-import HomePage from './pages/HomePage';
+import FrontPage from './pages/FrontPage';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
+import HomePage from './pages/HomePage';
 import DashboardPage from './pages/DashboardPage';
 import SuggestionPage from './pages/SuggestionPage'; 
+import SettingsPage from './pages/SettingsPage';
+import UploadPage from './pages/UploadPage';
+import CheckPage from './pages/CheckPage';
+import HistoryPage from './pages/HistoryPage';
 import ResultPage from './pages/ResultPage';
 
 import { AuthProvider } from './hooks/useAuth';
@@ -17,12 +22,17 @@ const App: React.FC = () => {
       <Router>
         <div className="App">
           <Routes>
-            <Route path="/" element={<HomePage />} />
+            <Route path="/" element={<FrontPage />} />
+            <Route path="/home" element={<HomePage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/suggest" element={<SuggestionPage />} /> 
-            <Route path="/result" element={<ResultPage />} /> 
+            <Route path="/suggest" element={<SuggestionPage />} />
+            <Route path="/uploadclothing" element={<UploadPage />} />
+            <Route path="/checkclothing" element={<CheckPage />} />
+            <Route path="/result" element={<ResultPage />} />
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </div>
       </Router>

@@ -225,7 +225,7 @@ def search_outfit():
                 index=pinecone_index,
                 model=clip_model,
                 processor=clip_processor,
-                top_k=3,  # LLMに評価させるため、複数の候補を取得
+                top_k=5,  # LLMに評価させるため、複数の候補を取得
                 category=category
             )
             logger.info(search_results)

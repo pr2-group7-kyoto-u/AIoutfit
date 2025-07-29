@@ -1,0 +1,386 @@
+/* normal.module.css */
+
+/* ========================================= */
+/* 共通背景スタイル (HomePage, UploadPage, RegisterPage, LoginPageなど) */
+/* ========================================= */
+.normalBackground {
+  background-image: url('../assets/bluebackground.png'); /* ★あなたの背景画像へのパスを確認 */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed; /* 背景画像をビューポートに固定 */
+
+  min-height: 100vh;
+  width: 100vw;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* 垂直方向の中央揃え */
+  align-items: center; /* 水平方向の中央揃え */
+
+  color: #fff; /* デフォルトの文字色を白に */
+  text-align: center;
+  padding: 20px;
+  box-sizing: border-box;
+
+  position: relative; /* z-indexを機能させるために必須 */
+  overflow: hidden; 
+  background-color: #000; /* フォールバックの背景色 */
+  z-index: 0; /* normalBackground自体を最下層のスタッキングコンテキストに置く */
+}
+
+/* 背景画像の上に重ねる半透明のレイヤー */
+.normalBackground::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.65);
+  z-index: 1; /* オーバーレイはz-index: 1 */
+  pointer-events: none; /* イベントをブロックしない */
+}
+
+/* ========================================= */
+/* メインコンテンツエリアのラッパー（カード型デザイン） */
+/* HomePage, UploadPage, RegisterPage, LoginPageのコンテンツを囲む */
+/* ========================================= */
+.mainContentArea {
+  position: relative;
+  z-index: 2; /* オーバーレイ (z-index: 1) より手前に */
+  background-color: rgba(255, 255, 255, 0.1); /* 背景と調和する透明な白 */
+  padding: 40px;
+  border-radius: 15px;
+  backdrop-filter: blur(8px); /* グラスモーフィズム効果 */
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  max-width: 600px; /* コンテンツの最大幅 */
+  width: 90%; /* レスポンシブ対応 */
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* カード内のコンテンツを中央揃え */
+  pointer-events: auto; /* カード自体がイベントを受け取れるように */
+}
+
+/* ========================================= */
+/* mainContentArea 内の要素セレクタによる基本スタイル (HomePage, UploadPage, RegisterPage, LoginPage共通) */
+/* ========================================= */
+
+.mainContentArea h1 {
+  font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 3.5em; 
+  color: #ffffff;
+  margin-bottom: 15px;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.6); 
+  letter-spacing: 2px;
+}
+
+.mainContentArea p {
+  font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1.3em;
+  color: #e0e0e0;
+  margin-bottom: 40px;
+  line-height: 1.5;
+  max-width: 80%; 
+  margin-left: auto; 
+  margin-right: auto; 
+}
+
+.mainContentArea ul { /* HomePageのボタンリスト */
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px; 
+  max-width: 400px; 
+  width: 90%;
+  position: relative;
+  z-index: 2;
+}
+
+.mainContentArea li { /* HomePageのリストアイテム */
+  margin-bottom: 0; 
+  width: 100%;
+}
+
+.mainContentArea a { /* HomePageのリンクボタン */
+  display: block; 
+  width: 100%; 
+  padding: 15px 25px; 
+  background-color: #3A9B93; /* ホームページのボタンの色 */
+  color: #ffffff;
+  text-decoration: none;
+  font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1.1em; 
+  font-weight: 600;
+  border-radius: 8px;
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  border: none;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  position: relative;
+  z-index: 3; /* ul (z-index:2) より手前に */
+  pointer-events: auto; 
+}
+
+.mainContentArea a:hover {
+  background-color: #308078; 
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ========================================= */
+/* フォーム関連の共通スタイル (UploadPage, RegisterPage, LoginPage共通) */
+/* ========================================= */
+
+.formContent { /* form要素に適用 */
+  width: 100%; 
+  display: flex;
+  flex-direction: column;
+  gap: 20px; 
+  text-align: left;
+  margin-top: 30px; 
+  position: relative;
+  z-index: 2; 
+  pointer-events: auto; 
+}
+
+.formGroup { /* form内のdiv要素に適用 */
+  margin-bottom: 0; 
+  display: flex; 
+  flex-direction: column;
+}
+
+.formLabel { /* label要素に適用 */
+  display: block;
+  color: #ffffff;
+  margin-bottom: 8px;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.formInput { /* input[type="text"], input[type="password"], input[type="number"]に適用 */
+  width: calc(100% - 24px); 
+  padding: 15px; 
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.2); 
+  color: #ffffff; 
+  font-size: 1.1em; 
+  box-sizing: border-box;
+  pointer-events: auto; 
+}
+
+.formInput::placeholder {
+  color: rgba(255, 255, 255, 0.6); 
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3);
+}
+
+/* select要素用のスタイル */
+.formSelect { /* select要素に適用 */
+  width: 100%; 
+  padding: 15px; 
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.2);
+  color: #ffffff; 
+  font-size: 1.1em;
+  box-sizing: border-box;
+  pointer-events: auto;
+  /* selectのデフォルトの矢印を隠す（任意） */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.9a14.6%2014.6%200%200%200-20.6%200L146.2%20190.5%2026%2069.9a14.6%2014.6%200%200%200-20.6%2020.6l130.4%20130.4a14.6%2014.6%200%200%200%2020.6%200L287%2090.5a14.6%2014.6%200%200%200%200-20.6z%22%2F%3E%3C%2Fsvg%3E');
+  background-repeat: no-repeat;
+  background-position: right 10px top 50%;
+  background-size: 1em auto;
+  padding-right: 30px; 
+}
+
+.formSelect option {
+  background-color: #333; 
+  color: #fff; 
+}
+
+
+.fileInput { /* input[type="file"]に適用 */
+  width: 100%;
+  padding: 15px 0;
+  color: #ffffff;
+  font-size: 1.1em;
+  pointer-events: auto;
+}
+
+.fileName { /* p要素に適用 */
+  color: #e0e0e0;
+  font-size: 0.95em;
+  margin-top: 5px;
+}
+
+/* ========================================= */
+/* 共通のアクションボタンクラス (formContent内のbutton, Link) */
+/* ========================================= */
+.actionButton { /* <button className={styles.actionButton}> や <Link className={styles.actionButton}> に適用 */
+  display: block; 
+  width: 100%; 
+  padding: 18px 30px; 
+  font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1.2em; 
+  font-weight: 600;
+  border-radius: 8px;
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  border: none;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  text-decoration: none; 
+  color: #ffffff;
+  pointer-events: auto;
+  
+  max-width: 350px; 
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+  position: relative; 
+  z-index: 3; /* mainContentArea内の他の要素より手前 */
+}
+
+.actionButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* 送信ボタン（「ログイン」、「登録」、「この服を登録する」ボタン）の色 */
+.submitButton {
+  background-color: #007bff; 
+  margin-top: 25px; 
+}
+
+.submitButton:hover {
+  background-color: #0056b3;
+}
+
+/* メッセージ表示 */
+.messageArea {
+  font-weight: bold;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  text-align: center;
+  color: #fff;
+  position: relative; 
+  z-index: 2; 
+  pointer-events: none;
+}
+
+.successMessage {
+  color: #28a745;
+}
+
+.errorMessage {
+  color: #dc3545;
+}
+
+/* 戻るボタンエリア */
+.backButtonArea { 
+  margin-top: 30px;
+  text-align: center;
+  width: 100%;
+}
+
+/* 「ホームに戻る」、「ログインページへ」、「ダッシュボードに戻る」ボタンの色 */
+.backLink {
+  background-color: #6c757d; 
+}
+
+.backLink:hover {
+  background-color: #5a6268;
+}
+
+
+/* ========================================= */
+/* レスポンシブ対応 */
+/* ========================================= */
+@media (max-width: 768px) {
+  .mainContentArea {
+    padding: 30px;
+    width: 95%;
+  }
+  .mainContentArea h1 {
+    font-size: 2.2em; 
+  }
+  .mainContentArea p {
+    font-size: 1em;
+  }
+  .mainContentArea ul { /* HomePageのul */
+    max-width: 350px;
+    gap: 15px;
+  }
+  .mainContentArea a { /* HomePageのa */
+    font-size: 1.1em;
+    padding: 15px 20px;
+  }
+  .formContent { /* gapを調整 */
+    gap: 15px;
+  }
+  .formLabel { 
+    font-size: 1em;
+  }
+  .formInput,
+  .formSelect, 
+  .fileInput {
+    font-size: 1em; 
+    padding: 12px;
+  }
+  .actionButton { 
+    font-size: 1em;
+    padding: 12px 20px;
+    max-width: 250px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mainContentArea {
+    padding: 25px;
+  }
+  .mainContentArea h1 {
+    font-size: 1.8em;
+  }
+  .mainContentArea p {
+    font-size: 0.9em;
+    margin-bottom: 25px; 
+  }
+  .mainContentArea ul { /* HomePageのul */
+    max-width: 300px;
+    gap: 12px;
+  }
+  .mainContentArea a { /* HomePageのa */
+    font-size: 1em;
+    padding: 12px 18px;
+  }
+  .formContent {
+    gap: 10px; 
+  }
+  .formLabel {
+    font-size: 0.9em;
+  }
+  .formInput,
+  .formSelect,
+  .fileInput {
+    font-size: 0.9em;
+    padding: 10px;
+  }
+  .actionButton {
+    font-size: 0.9em;
+    padding: 10px 15px;
+    max-width: 200px;
+  }
+}
