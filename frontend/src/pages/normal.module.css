@@ -1,14 +1,14 @@
 /* normal.module.css */
 
 /* ========================================= */
-/* 共通背景スタイル (HomePage, UploadPageなど) */
+/* 共通背景スタイル (HomePage, UploadPage, RegisterPage, LoginPageなど) */
 /* ========================================= */
 .normalBackground {
-  background-image: url('../assets/bluebackground.png');
+  background-image: url('../assets/bluebackground.png'); /* ★あなたの背景画像へのパスを確認 */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-attachment: fixed; 
+  background-attachment: fixed; /* 背景画像をビューポートに固定 */
 
   min-height: 100vh;
   width: 100vw;
@@ -26,6 +26,7 @@
   position: relative; /* z-indexを機能させるために必須 */
   overflow: hidden; 
   background-color: #000; /* フォールバックの背景色 */
+  z-index: 0; /* normalBackground自体を最下層のスタッキングコンテキストに置く */
 }
 
 /* 背景画像の上に重ねる半透明のレイヤー */
@@ -43,6 +44,7 @@
 
 /* ========================================= */
 /* メインコンテンツエリアのラッパー（カード型デザイン） */
+/* HomePage, UploadPage, RegisterPage, LoginPageのコンテンツを囲む */
 /* ========================================= */
 .mainContentArea {
   position: relative;
@@ -62,7 +64,7 @@
 }
 
 /* ========================================= */
-/* mainContentArea 内の要素セレクタによる基本スタイル */
+/* mainContentArea 内の要素セレクタによる基本スタイル (HomePage, UploadPage, RegisterPage, LoginPage共通) */
 /* ========================================= */
 
 .mainContentArea h1 {
@@ -85,7 +87,7 @@
   margin-right: auto; 
 }
 
-.mainContentArea ul {
+.mainContentArea ul { /* HomePageのボタンリスト */
   list-style: none;
   padding: 0;
   margin: 0;
@@ -95,23 +97,23 @@
   max-width: 400px; 
   width: 90%;
   position: relative;
-  z-index: 2; /* フォーム入力フィールドより手前にしたい場合は調整 */
+  z-index: 2;
 }
 
-.mainContentArea li {
+.mainContentArea li { /* HomePageのリストアイテム */
   margin-bottom: 0; 
   width: 100%;
 }
 
-.mainContentArea a { /* Linkコンポーネントがレンダリングするaタグに適用 */
-  display: block; /* blockにして幅を100%に */
+.mainContentArea a { /* HomePageのリンクボタン */
+  display: block; 
   width: 100%; 
-  padding: 15px 25px; /* 大きく */
+  padding: 15px 25px; 
   background-color: #3A9B93; /* ホームページのボタンの色 */
   color: #ffffff;
   text-decoration: none;
   font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  font-size: 1.1em; /* 大きく */
+  font-size: 1.1em; 
   font-weight: 600;
   border-radius: 8px;
   transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
@@ -119,6 +121,8 @@
   border: none;
   cursor: pointer;
   letter-spacing: 0.5px;
+  position: relative;
+  z-index: 3; /* ul (z-index:2) より手前に */
   pointer-events: auto; 
 }
 
@@ -128,28 +132,29 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* フォームのコンテナ（UploadPage用） */
-.mainContentArea form { /* form要素に直接適用 */
+/* ========================================= */
+/* フォーム関連の共通スタイル (UploadPage, RegisterPage, LoginPage共通) */
+/* ========================================= */
+
+.formContent { /* form要素に適用 */
   width: 100%; 
   display: flex;
   flex-direction: column;
-  gap: 20px; /* フォーム要素間のスペース */
+  gap: 20px; 
   text-align: left;
   margin-top: 30px; 
   position: relative;
-  z-index: 2; /* contentWrapper内のスタッキングコンテキスト */
+  z-index: 2; 
   pointer-events: auto; 
 }
 
-/* フォームグループ（ラベルと入力欄のセット） */
-.mainContentArea form > div { /* formの直接の子であるdivに適用 */
+.formGroup { /* form内のdiv要素に適用 */
   margin-bottom: 0; 
-  display: flex; /* ラベルと入力を縦並びにするため */
+  display: flex; 
   flex-direction: column;
 }
 
-/* フォームラベル */
-.mainContentArea label { /* label要素に直接適用 */
+.formLabel { /* label要素に適用 */
   display: block;
   color: #ffffff;
   margin-bottom: 8px;
@@ -157,47 +162,79 @@
   font-weight: 600;
 }
 
-/* フォーム入力欄 */
-.mainContentArea input[type="text"],
-.mainContentArea input[type="file"] { /* input要素に直接適用 */
+.formInput { /* input[type="text"], input[type="password"], input[type="number"]に適用 */
   width: calc(100% - 24px); 
-  padding: 15px; /* 大きく */
+  padding: 15px; 
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
   background-color: rgba(0, 0, 0, 0.2); 
   color: #ffffff; 
-  font-size: 1.1em; /* 大きく */
+  font-size: 1.1em; 
   box-sizing: border-box;
   pointer-events: auto; 
 }
 
-.mainContentArea input::placeholder {
+.formInput::placeholder {
   color: rgba(255, 255, 255, 0.6); 
 }
 
-.mainContentArea input:focus {
+.formInput:focus {
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3);
 }
 
-/* ファイル名表示 (classNameで指定) */
-.fileName {
+/* select要素用のスタイル */
+.formSelect { /* select要素に適用 */
+  width: 100%; 
+  padding: 15px; 
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.2);
+  color: #ffffff; 
+  font-size: 1.1em;
+  box-sizing: border-box;
+  pointer-events: auto;
+  /* selectのデフォルトの矢印を隠す（任意） */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.9a14.6%2014.6%200%200%200-20.6%200L146.2%20190.5%2026%2069.9a14.6%2014.6%200%200%200-20.6%2020.6l130.4%20130.4a14.6%2014.6%200%200%200%2020.6%200L287%2090.5a14.6%2014.6%200%200%200%200-20.6z%22%2F%3E%3C%2Fsvg%3E');
+  background-repeat: no-repeat;
+  background-position: right 10px top 50%;
+  background-size: 1em auto;
+  padding-right: 30px; 
+}
+
+.formSelect option {
+  background-color: #333; 
+  color: #fff; 
+}
+
+
+.fileInput { /* input[type="file"]に適用 */
+  width: 100%;
+  padding: 15px 0;
+  color: #ffffff;
+  font-size: 1.1em;
+  pointer-events: auto;
+}
+
+.fileName { /* p要素に適用 */
   color: #e0e0e0;
   font-size: 0.95em;
   margin-top: 5px;
 }
 
 /* ========================================= */
-/* ★修正箇所: 共通のアクションボタンクラスを定義 */
-/* 「この服を登録する」ボタンと「戻る」ボタンに適用 */
+/* 共通のアクションボタンクラス (formContent内のbutton, Link) */
 /* ========================================= */
-.actionButton {
-  display: block; /* ★変更: block にする */
-  width: 100%; /* ★変更: 親要素の幅いっぱいに */
-  padding: 15px 25px;
+.actionButton { /* <button className={styles.actionButton}> や <Link className={styles.actionButton}> に適用 */
+  display: block; 
+  width: 100%; 
+  padding: 18px 30px; 
   font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  font-size: 1.1em;
+  font-size: 1.2em; 
   font-weight: 600;
   border-radius: 8px;
   transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
@@ -205,15 +242,16 @@
   border: none;
   cursor: pointer;
   letter-spacing: 0.5px;
-  text-decoration: none; /* Linkタグ用 */
-  color: #ffffff; /* 文字色 */
+  text-decoration: none; 
+  color: #ffffff;
   pointer-events: auto;
   
-  /* ★変更: max-widthを設定し、中央揃えにするためのマージンを追加 */
-  max-width: 300px; /* 例えばこのくらいの最大幅を設定 */
+  max-width: 350px; 
   margin-left: auto;
   margin-right: auto;
-  box-sizing: border-box; /* paddingを幅に含める */
+  box-sizing: border-box;
+  position: relative; 
+  z-index: 3; /* mainContentArea内の他の要素より手前 */
 }
 
 .actionButton:hover {
@@ -221,11 +259,10 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* 送信ボタン（「この服を登録する」ボタン） */
+/* 送信ボタン（「ログイン」、「登録」、「この服を登録する」ボタン）の色 */
 .submitButton {
-  background-color: #007bff; /* 青色のアクセントカラー */
-  margin-top: 25px; /* 上のフォームからのマージン */
-  /* display, width, max-width, margin-left, margin-right は .actionButton から継承される */
+  background-color: #007bff; 
+  margin-top: 25px; 
 }
 
 .submitButton:hover {
@@ -239,6 +276,8 @@
   margin-bottom: 15px;
   text-align: center;
   color: #fff;
+  position: relative; 
+  z-index: 2; 
   pointer-events: none;
 }
 
@@ -251,16 +290,15 @@
 }
 
 /* 戻るボタンエリア */
-.backButtonArea {
+.backButtonArea { 
   margin-top: 30px;
   text-align: center;
   width: 100%;
 }
 
-/* 戻るボタン */
+/* 「ホームに戻る」、「ログインページへ」、「ダッシュボードに戻る」ボタンの色 */
 .backLink {
-  background-color: #6c757d; /* グレー系の色 */
-  /* display, width, max-width, margin-left, margin-right は .actionButton から継承される */
+  background-color: #6c757d; 
 }
 
 .backLink:hover {
@@ -277,7 +315,7 @@
     width: 95%;
   }
   .mainContentArea h1 {
-    font-size: 2.2em;
+    font-size: 2.2em; 
   }
   .mainContentArea p {
     font-size: 1em;
@@ -293,16 +331,19 @@
   .formContent { /* gapを調整 */
     gap: 15px;
   }
-  .formContent input[type="text"],
-  .formContent input[type="file"] {
-    font-size: 1em; /* 大きさ調整 */
-    padding: 12px; /* パディングも調整 */
+  .formLabel { 
+    font-size: 1em;
   }
-  /* ★レスポンシブ: actionButton の font-size, padding, max-width を調整 */
-  .actionButton {
+  .formInput,
+  .formSelect, 
+  .fileInput {
+    font-size: 1em; 
+    padding: 12px;
+  }
+  .actionButton { 
     font-size: 1em;
     padding: 12px 20px;
-    max-width: 250px; /* スマホでは最大幅を狭める */
+    max-width: 250px;
   }
 }
 
@@ -315,7 +356,7 @@
   }
   .mainContentArea p {
     font-size: 0.9em;
-    margin-bottom: 25px;
+    margin-bottom: 25px; 
   }
   .mainContentArea ul { /* HomePageのul */
     max-width: 300px;
@@ -326,14 +367,17 @@
     padding: 12px 18px;
   }
   .formContent {
-    gap: 10px;
+    gap: 10px; 
   }
-  .formContent input[type="text"],
-  .formContent input[type="file"] {
+  .formLabel {
+    font-size: 0.9em;
+  }
+  .formInput,
+  .formSelect,
+  .fileInput {
     font-size: 0.9em;
     padding: 10px;
   }
-  /* ★レスポンシブ: actionButton の font-size, padding, max-width を調整 */
   .actionButton {
     font-size: 0.9em;
     padding: 10px 15px;

@@ -144,7 +144,7 @@ const UploadPage: React.FC = () => {
         {/* 戻るボタンエリアにbackButtonAreaクラスを適用 */}
         <div className={styles.backButtonArea}> 
           {/* Linkに共通クラスと個別クラスを両方適用 */}
-          <Link to="/" className={`${styles.actionButton} ${styles.backLink}`}>戻る</Link>
+          <Link to="/home" className={`${styles.actionButton} ${styles.backLink}`}>戻る</Link>
         </div>
       </div> {/* .mainContentArea 閉じタグ */}
     </div>

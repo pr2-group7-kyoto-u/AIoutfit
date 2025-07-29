@@ -180,7 +180,7 @@ const SuggestionPage: React.FC = () => {
       </div>
 
       <div style={{ marginTop: '20px', textAlign: 'center' }}>
-        <Link to="/" 
+        <Link to="/home" 
           style={{ 
             color: '#6c757d', 
             textDecoration: 'none', 

@@ -8,7 +8,7 @@ const CheckPage: React.FC = () => (
     <h1>服の確認</h1>
     <p>登録した服を確認できます。</p>
     <ul>
-      <li><Link to="/">戻る</Link></li>
+      <li><Link to="/home">戻る</Link></li>
     </ul>
   </div>
 );

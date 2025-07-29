@@ -122,9 +122,9 @@ const DashboardPage: React.FC = () => {
       </div>
       <button onClick={logout} style={{ float: 'right' }}>ログアウト</button>
       <br/>
-      <Link to="/suggestion">AIとコーデを相談する</Link> 
+      <Link to="/suggest">AIとコーデを相談する</Link> 
       <br/>
-      <Link to="/">ホームに戻る</Link>
+      <Link to="/home">ホームに戻る</Link>
 
       <h3>服の登録</h3>
       <form onSubmit={handleAddCloth}>

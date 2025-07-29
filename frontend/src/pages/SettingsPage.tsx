@@ -28,7 +28,7 @@ const SettingsPage: React.FC = () => {
         <button type="submit">ログイン</button>
       </form>
       {message && <p>{message}</p>}
-      <Link to="/">ホームに戻る</Link>
+      <Link to="/home">ホームに戻る</Link>
     </div>
   );
 };

@@ -8,7 +8,7 @@ const HistoryPage: React.FC = () => (
     <h1>履歴</h1>
     <p>こちらで過去に着たコーディネートを調べることができます。</p>
     <ul>
-      <li><Link to="/">戻る</Link></li>
+      <li><Link to="/home">戻る</Link></li>
     </ul>
   </div>
 );
