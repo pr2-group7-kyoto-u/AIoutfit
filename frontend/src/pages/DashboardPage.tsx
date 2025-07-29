@@ -9,7 +9,9 @@ interface Cloth {
   name: string;
   color: string;
   category: string;
-  image_url?: string; // 画像URLはオプショナル（例: 153b4d1d-cff7-4035-a356-18e59d71c125.jpg）
+  preferred: boolean;
+  available: boolean;
+  image_url?: string; // 画像URLはオプショナル
 }
 
 // ★★★ MinIOのベースURLをコンポーネント内で定義 ★★★
@@ -110,6 +112,62 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+  const handleSetPreferred = async (clothID: number, preferred: boolean) => {
+    if (!user) return;
+    try {
+      const result = await api.updateClothes(user.id, clothID, { "preferred": preferred });
+      if (result) {
+        setClothes(prevClothes =>
+          prevClothes.map(cloth =>
+            cloth.id === clothID ? { ...cloth, preferred: preferred } : cloth
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to set to preferred:", error);
+      setMessage("お気に入りに設定失敗しました。");
+    }
+  }
+
+  const handleSetAvailabile = async (clothId: number, available: boolean) => {
+    if (!user) return;
+    try {
+      const updateData = { available: available };
+      const result = await api.updateClothes(user.id, clothId, updateData);
+      if (result) {
+        setClothes(prevClothes =>
+          prevClothes.map(cloth =>
+            cloth.id === clothId ? { ...cloth, available: available } : cloth
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to set to available:", error);
+      setMessage("利用可能に失敗しました。");
+    }
+  };
+
+  const handleDeleteCloth = async (clothID: number) => {
+    if (!user) return;
+    try {
+      const result = await api.deleteClothes(user.id, clothID);
+      if (result) {
+        setClothes(prevClothes =>
+          prevClothes.filter(cloth => cloth.id !== clothID)
+        );
+      }
+    } catch (error) {
+      console.error("Failed to delete clothes:", error);
+      setMessage("服の削除に失敗しました。");
+    }
+  };
+  
+  const handleLogout = () => {
+    logout();
+    // navigate('/login'); useAuth内のlogoutで処理されるか、useEffectで検知される
+  };
+  
+  // 認証状態の読み込み中はスピナーなどを表示
   if (isLoading) {
     return <div>認証状態を読み込み中...</div>;
   }
@@ -156,25 +214,46 @@ const DashboardPage: React.FC = () => {
       </form>
 
       <h3>あなたの服</h3>
-      <ul>
-        {clothes.map((cloth) => (
-          <li key={cloth.id}>
-            {cloth.name} ({cloth.color}, {cloth.category})
-            {/* ▼▼▼ ここを修正 ▼▼▼ */}
-            {cloth.image_url && (
-              <>
-                {console.log(`${MINIO_BASE_URL}${cloth.image_url}`)}
-                <img 
-                  src={`${MINIO_BASE_URL}${cloth.image_url}`} 
-                  alt={cloth.name} 
-                  style={{height: '50px', marginLeft: '10px'}} 
-                />
-              </>
-            )}
-            {/* ▲▲▲ ここまで修正 ▲▲▲ */}
-          </li>
-        ))}
-      </ul>
+      {clothes.length === 0 ? (
+        <p>まだ服が登録されていません。</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>名前</th>
+              <th>色</th>
+              <th>カテゴリ</th>
+              <th>イメージ</th>
+              <th>お気に入り</th>
+              <th>利用可能</th>
+              <th>削除</th>
+            </tr>
+          </thead>
+          <tbody>
+            {clothes.map((cloth) => (
+              <tr key={cloth.id}>
+                <td>{cloth.name}</td>
+                <td>{cloth.color}</td>
+                <td>{cloth.category}</td>
+                <td>
+                  {/* ★ここを修正: ulのロジックをtableに適用 */}
+                  {cloth.image_url && (
+                    <img 
+                      src={`${MINIO_BASE_URL}${cloth.image_url}`} 
+                      alt={cloth.name} 
+                      style={{height: '200px'}} 
+                    />
+                  )}
+                </td>
+                <td><button onClick={() => handleSetPreferred(cloth.id, !cloth.preferred)}>{cloth.preferred ? "✔️" : "✖️"}</button></td>
+                <td><button onClick={() => handleSetAvailabile(cloth.id, !cloth.available)}>{cloth.available ? "✔️" : "✖️"}</button></td>
+                <td><button onClick={() => handleDeleteCloth(cloth.id)}>削除</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
       
       <h3>コーデ提案</h3>
       <form onSubmit={handleSuggestOutfits}>
